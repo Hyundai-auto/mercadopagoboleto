@@ -2,16 +2,20 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Configuração do Mercado Pago usando o Access Token das variáveis de ambiente
+// ============================================================
+// COLOQUE SEU ACCESS TOKEN DO MERCADO PAGO ABAIXO
+// ============================================================
+const SEU_ACCESS_TOKEN = "APP_USR-5824276345834591-043023-fdf41a17c3417b335770a38c0525254e-3346775579"; 
+// ============================================================
+
 const client = new MercadoPagoConfig({ 
-    accessToken: process.env.MP_ACCESS_TOKEN 
+    accessToken: SEU_ACCESS_TOKEN 
 });
 const payment = new Payment(client);
 
@@ -46,7 +50,6 @@ app.post('/process_payment', async (req, res) => {
 
         const result = await payment.create(paymentData);
         
-        // Retorna os dados do boleto gerado
         res.status(201).json({
             id: result.id,
             status: result.status,
@@ -56,8 +59,8 @@ app.post('/process_payment', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro MP:', error);
-        res.status(500).json({ error: 'Erro ao gerar boleto' });
+        console.error('Erro ao gerar boleto:', error);
+        res.status(500).json({ error: 'Erro ao processar o pagamento' });
     }
 });
 
