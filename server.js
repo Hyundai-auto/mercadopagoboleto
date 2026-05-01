@@ -1,74 +1,65 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// CONFIGURAÇÃO: Insira seu Access Token do Mercado Pago entre as aspas abaixo
-const MP_ACCESS_TOKEN = "APP_USR-5824276345834591-043023-fdf41a17c3417b335770a38c0525254e-3346775579";
-
+// Configuração do Mercado Pago usando o Access Token das variáveis de ambiente
 const client = new MercadoPagoConfig({ 
-    accessToken: MP_ACCESS_TOKEN 
+    accessToken: process.env.MP_ACCESS_TOKEN 
 });
 const payment = new Payment(client);
 
-app.post('/api/boleto', async (req, res) => {
+app.post('/process_payment', async (req, res) => {
     try {
-        const { payer_name, payer_cpf, amount } = req.body;
-
-        // Validação básica do token
-        if (MP_ACCESS_TOKEN === "COLOQUE_SEU_ACCESS_TOKEN_AQUI") {
-            return res.status(400).json({
-                success: false,
-                message: 'Erro: O Access Token não foi configurado no arquivo server.js'
-            });
-        }
-
-        // Separar nome e sobrenome
-        const nameParts = payer_name.trim().split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Sobrenome';
+        const { transaction_amount, description, payer } = req.body;
 
         const paymentData = {
             body: {
-                transaction_amount: parseFloat(amount),
-                description: 'Compra de Produto',
-                payment_method_id: 'bolbradesco',
+                transaction_amount: parseFloat(transaction_amount),
+                description: description || 'Pagamento de Pedido',
+                payment_method_id: 'boleto',
                 payer: {
-                    email: 'comprador@email.com',
-                    first_name: firstName,
-                    last_name: lastName,
+                    email: payer.email,
+                    first_name: payer.first_name,
+                    last_name: payer.last_name,
                     identification: {
-                        type: 'CPF',
-                        number: payer_cpf.replace(/\D/g, '')
+                        type: payer.identification.type,
+                        number: payer.identification.number
+                    },
+                    address: {
+                        zip_code: payer.address.zip_code,
+                        street_name: payer.address.street_name,
+                        street_number: payer.address.street_number,
+                        neighborhood: payer.address.neighborhood,
+                        city: payer.address.city,
+                        federal_unit: payer.address.federal_unit
                     }
                 }
             }
         };
 
         const result = await payment.create(paymentData);
-
-        res.json({
-            success: true,
-            barcode: result.barcode.content,
-            external_resource_url: result.transaction_details.external_resource_url,
-            id: result.id
+        
+        // Retorna os dados do boleto gerado
+        res.status(201).json({
+            id: result.id,
+            status: result.status,
+            barcode: result.point_of_interaction.transaction_data.barcode.content,
+            digitable_line: result.point_of_interaction.transaction_data.transaction_id,
+            ticket_url: result.point_of_interaction.transaction_data.ticket_url
         });
 
     } catch (error) {
-        console.error('Erro ao gerar boleto:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erro ao processar pagamento'
-        });
+        console.error('Erro MP:', error);
+        res.status(500).json({ error: 'Erro ao gerar boleto' });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
