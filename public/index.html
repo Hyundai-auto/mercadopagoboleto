@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opções de Pagamento | Pagamento Seguro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0055ff;
+            --primary-dark: #0033cc;
+            --primary-light: #e8f0ff;
+            --accent: #00bfff;
+            --success: #28a745;
+            --warning: #ff6b35;
+            --danger: #ff3b30;
+            --text-dark: #1a1a1a;
+            --text-gray: #555;
+            --text-light: #888;
+            --bg-light: #f5f7fa;
+            --bg-white: #ffffff;
+            --border-color: #e0e4e8;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; }
+        body { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+        .container { width: 100%; max-width: 480px; background-color: var(--bg-white); box-shadow: var(--shadow-md); display: flex; flex-direction: column; }
+        
+        .header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .brand-logo { font-size: 1.3rem; font-weight: 800; }
+        
+        .main-content { padding: 20px; }
+        .payment-option-card { border: 2px solid var(--border-color); border-radius: 20px; padding: 24px; margin-bottom: 20px; cursor: pointer; position: relative; transition: all 0.3s; }
+        .payment-option-card.selected { border-color: var(--primary); background: rgba(0, 85, 255, 0.02); }
+        .payment-option-card.selected::after { content: '✓'; position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .payment-option-icon { font-size: 1.8rem; color: var(--primary); margin-bottom: 10px; }
+        .payment-option-title { font-size: 1.1rem; font-weight: 800; }
+        .payment-option-price { font-size: 1.5rem; font-weight: 900; color: var(--primary); margin: 5px 0; }
+        .payment-option-desc { font-size: 0.85rem; color: var(--text-gray); }
+
+        .form-container { margin-top: 15px; display: none; flex-direction: column; gap: 12px; }
+        .payment-option-card.selected .form-container { display: flex; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; }
+        .input-group input { padding: 12px; border: 2px solid var(--border-color); border-radius: 10px; outline: none; }
+        .input-group input:focus { border-color: var(--primary); }
+
+        .action-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 10px; width: 100%; }
+        
+        .result-section { display: none; flex-direction: column; gap: 15px; margin-top: 20px; animation: fadeIn 0.3s ease-out; }
+        .barcode-box { background: #f8fafc; border: 2px dashed var(--border-color); padding: 15px; border-radius: 12px; text-align: center; }
+        .barcode-text { font-family: monospace; font-size: 0.9rem; word-break: break-all; display: block; margin: 10px 0; }
+        
+        .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .error-msg { color: var(--danger); font-size: 0.8rem; display: none; margin-top: 5px; }
+        .error-msg.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="brand-logo">CHECKOUT SEGURO</div>
+            <i class="fas fa-lock"></i>
+        </header>
+
+        <div class="main-content" id="main-content">
+            <div class="payment-option-card selected" id="card-boleto">
+                <div class="payment-option-icon"><i class="fas fa-barcode"></i></div>
+                <div class="payment-option-title">Boleto Bancário</div>
+                <div class="payment-option-price" id="display-price">R$ 97,00</div>
+                <div class="payment-option-desc">Aprovação em até 1 dia útil.</div>
+                
+                <div class="form-container" id="form-boleto">
+                    <div class="input-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="payer-name" placeholder="Ex: João Silva" required>
+                    </div>
+                    <div class="input-group">
+                        <label>CPF</label>
+                        <input type="tel" id="payer-cpf" placeholder="000.000.000-00" maxlength="14" required>
+                    </div>
+                    <div id="error-msg" class="error-msg">Por favor, preencha todos os campos corretamente.</div>
+                    <button class="action-btn" id="btn-generate">
+                        <span id="btn-text">GERAR BOLETO</span>
+                    </button>
+                </div>
+
+                <div class="result-section" id="result-boleto">
+                    <div class="barcode-box">
+                        <strong>Código de Barras:</strong>
+                        <span class="barcode-text" id="barcode-display">00000.00000 00000.000000 00000.000000 0 00000000000000</span>
+                        <button class="action-btn" style="background: var(--success);" id="btn-copy">COPIAR CÓDIGO</button>
+                    </div>
+                    <a id="link-boleto" href="#" target="_blank" class="action-btn" style="text-align: center; text-decoration: none; display: block;">VISUALIZAR BOLETO PDF</a>
+                    <div style="font-size: 0.8rem; text-align: center; color: var(--text-gray);">
+                        <i class="fas fa-info-circle"></i> O boleto também foi enviado para o seu e-mail.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const price = 97.00; // Valor fixo conforme exemplo
+        document.getElementById('display-price').innerText = `R$ ${price.toFixed(2).replace('.', ',')}`;
+
+        // Máscara de CPF
+        document.getElementById('payer-cpf').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            if (value.length > 9) value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            else if (value.length > 6) value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+            else if (value.length > 3) value = value.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+            e.target.value = value;
+        });
+
+        document.getElementById('btn-generate').addEventListener('click', async () => {
+            const name = document.getElementById('payer-name').value;
+            const cpf = document.getElementById('payer-cpf').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (name.length < 5 || cpf.length < 14) {
+                errorMsg.classList.add('visible');
+                return;
+            }
+            errorMsg.classList.remove('visible');
+
+            const btn = document.getElementById('btn-generate');
+            const btnText = document.getElementById('btn-text');
+            btn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const response = await fetch('/api/boleto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        payer_name: name,
+                        payer_cpf: cpf,
+                        amount: price
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('form-boleto').style.display = 'none';
+                    document.getElementById('result-boleto').style.display = 'flex';
+                    document.getElementById('barcode-display').innerText = data.barcode;
+                    document.getElementById('link-boleto').href = data.external_resource_url;
+                    
+                    // Salvar no cache para persistência
+                    localStorage.setItem('last_boleto', JSON.stringify(data));
+                } else {
+                    alert('Erro ao gerar boleto. Tente novamente.');
+                    btn.disabled = false;
+                    btnText.innerText = 'GERAR BOLETO';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erro de conexão. Tente novamente.');
+                btn.disabled = false;
+                btnText.innerText = 'GERAR BOLETO';
+            }
+        });
+
+        document.getElementById('btn-copy').addEventListener('click', () => {
+            const barcode = document.getElementById('barcode-display').innerText;
+            navigator.clipboard.writeText(barcode).then(() => {
+                const btn = document.getElementById('btn-copy');
+                btn.innerText = 'COPIADO!';
+                setTimeout(() => btn.innerText = 'COPIAR CÓDIGO', 2000);
+            });
+        });
+
+        // Verificar cache ao carregar
+        window.onload = () => {
+            const cached = localStorage.getItem('last_boleto');
+            if (cached) {
+                const data = JSON.parse(cached);
+                document.getElementById('form-boleto').style.display = 'none';
+                document.getElementById('result-boleto').style.display = 'flex';
+                document.getElementById('barcode-display').innerText = data.barcode;
+                document.getElementById('link-boleto').href = data.external_resource_url;
+            }
+        };
+    </script>
+</body>
+</html>
