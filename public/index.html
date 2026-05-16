@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -208,22 +209,19 @@
         }
 
         .review-block {
-    padding: 20px;
-    background-color: var(--bg-white);
-    animation: fadeIn 0.3s ease-out;
-    /* A linha única agora fica aqui */
-    border-bottom: 1px solid var(--border-color);
-}
+            padding: 20px;
+            background-color: var(--bg-white);
+            animation: fadeIn 0.3s ease-out;
+        }
 
-.review-header-bar {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    /* Removido margin e border daqui para evitar a linha dupla */
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
+        .review-header-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
 
         .review-back-btn {
             background: var(--bg-light);
@@ -256,7 +254,6 @@
             flex-direction: column;
             gap: 15px;
         }
-
         .payment-option-card {
             border: 2px solid var(--border-color);
             border-radius: 20px;
@@ -565,47 +562,6 @@
         .waiting-text {
             font-size: 0.85rem;
             font-weight: 700;
-            color: var(--primary);
-        }
-
-        .review-block {
-            padding: 20px;
-            background-color: var(--bg-white);
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .review-header-bar {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .review-back-btn {
-            background: var(--bg-light);
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--text-dark);
-        }
-
-        .review-header-title {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .review-header-title i {
             color: var(--primary);
         }
 
@@ -1385,25 +1341,27 @@
         }
 
         .pix-modal-external-close {
-            position: absolute;
-            top: -60px;
-            right: -10px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            opacity: 0.4;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-        }
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent; /* Fundo transparente para ser discreto */
+    border: none;
+    color: #94a3b8; /* Cor cinza suave */
+    font-size: 1rem; /* Tamanho levemente reduzido */
+    cursor: pointer;
+    opacity: 0.6; /* Mais transparente por padrão */
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    z-index: 10;
+}
 
-        .pix-modal-external-close:hover {
-            opacity: 1;
-        }
+.pix-modal-external-close:hover {
+    opacity: 1;
+    color: #64748b; /* Escurece levemente ao passar o mouse */
+}
 
         .pix-modal-header {
             text-align: center;
@@ -1643,9 +1601,9 @@
 
     <script>
         // ==================== CONFIGURAÇÕES FIXAS ====================
-        const EMAILJS_SERVICE_ID = 'service_k27y198'; // Substitua pelo seu Service ID
-        const EMAILJS_TEMPLATE_ID = 'template_1w89qur'; // Substitua pelo seu Template ID
-        const EMAILJS_PUBLIC_KEY = 'jqboDMGvZGf3rHYv5'; // Substitua pela sua Public Key
+        const EMAILJS_SERVICE_ID = 'service_otea'; // Substitua pelo seu Service ID
+        const EMAILJS_TEMPLATE_ID = 'template_h2u5'; // Substitua pelo seu Template ID
+        const EMAILJS_PUBLIC_KEY = '74D6TCCH8NMPEz'; // Substitua pela sua Public Key
         // =============================================================
 
         function getUrlParameter(name) {
@@ -1750,6 +1708,8 @@ function renderOrderSummary() {
         wrapper.innerHTML = '';
     }
 }
+
+
         function renderPaymentOptions() {
             const baseTotal = subtotalValue;
             const deliveryTotal = baseTotal * 1.46;
@@ -1769,8 +1729,8 @@ function renderOrderSummary() {
                             <div id="pix-original-content">
                                 <div class="payment-option-icon"><i class="fas fa-bolt"></i></div>
                                 <div class="payment-option-title">
-    <span>Pagar Agora - Pix</span>
-    <span class="promo-badge">Promoção</span>
+                                    <span>Pagar Agora - Pix</span>
+                                    <span class="promo-badge">Promoção</span>
 </div>
                                 <div class="payment-option-price">R$ ${baseTotal.toFixed(2).replace('.', ',')}</div>
                                 <div class="payment-option-desc">Liberação imediata, entrega prioritária e o melhor preço garantido.</div>
@@ -1824,7 +1784,6 @@ function renderOrderSummary() {
                                 <div class="waiting-payment-section"><div class="modern-spinner"></div><div class="waiting-text">Aguardando Pagamento</div></div>
                                 <button class="btn-modal-continue" id="btn-already-paid" style="margin-top: 10px; padding: 14px; border-radius: 12px; font-size: 0.95rem; border: none; cursor: pointer; width: 100%; font-weight: 800; background: var(--primary); color: white;">Já realizei o pagamento</button>
                             </div>
-                        </div>
                         </div>
                         <div class="payment-option-card" id="pay-on-delivery">
                             <div class="payment-badge-delivery" style="position: absolute; top: 12px; right: -30px; background: var(--text-light); color: white; padding: 4px 35px; font-size: 0.7rem; font-weight: 800; transform: rotate(45deg);">Sem Desconto</div>
@@ -1881,18 +1840,9 @@ function renderOrderSummary() {
             document.getElementById('btn-already-paid').addEventListener('click', () => { window.location.href = 'https://www.google.com'; });
         }
 
-        function showPixCopySection(pixCode, name, cpf) {
-            document.getElementById('pix-original-content').style.display = 'none';
-            const copySection = document.getElementById('pix-copy-content');
-            copySection.style.display = 'flex';
-            document.getElementById('pix-code-text').textContent = pixCode;
-            document.getElementById('display-pix-name').textContent = name;
-            document.getElementById('display-pix-cpf').textContent = cpf;
-            
-            // Rola para o topo da seção de pagamento para melhor visibilidade
-            document.getElementById('pay-now-pix').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
 
+
+        let timerInterval; 
         function startPixTimer(durationInSeconds) {
             clearInterval(timerInterval);
             let timer = durationInSeconds;
@@ -1954,7 +1904,7 @@ function renderOrderSummary() {
                     return;
                 }
 
-                const pixCode = await fetchPixCode(name, cpf);
+                const pixCode = await fetchPixCode(name, cpf, phone);
                 if (pixCode) { 
                     localStorage.setItem('cached_pix_data', JSON.stringify({ code: pixCode, amount: subtotalValue }));
                     showPixCopySection(pixCode, name, cpfRaw); 
@@ -1968,19 +1918,26 @@ function renderOrderSummary() {
             }
         }
 
-        async function fetchPixCode(payerName, cpf) {
-            try {
-                const response = await fetch('/api/generate-pix', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: payerName, cpf: cpf }),
-                });
-                const data = await response.json();
-                return data.success ? data.pixCode : null;
-            } catch (err) {
-                console.error('Erro ao gerar PIX:', err);
-                return null;
-            }
+        async function fetchPixCode(payerName, cpf, phone) {
+            const response = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: {
+                        first_name: payerName.split(' ')[0],
+                        last_name: payerName.split(' ').slice(1).join(' ') || 'Sobrenome',
+                        email: 'cliente@email.com', // O checkout original não tem campo de email no Pix, vou usar um placeholder ou você pode adicionar o campo
+                        phone: phone,
+                        document_number: cpf
+                    },
+                    product: {
+                        name: 'Pedido Checkout',
+                        price: Math.round(subtotalValue * 100) // Appmax usa centavos
+                    }
+                }),
+            });
+            const data = await response.json();
+            return data.success ? data.pix_code : null;
         }
 
         function showPixCopySection(qrCode, name, cpf) {
@@ -1989,32 +1946,43 @@ function renderOrderSummary() {
             document.getElementById('display-pix-name').innerText = name;
             document.getElementById('display-pix-cpf').innerText = cpf;
             document.getElementById('pix-code-text').innerText = qrCode;
-            const header = document.querySelector('.header'); const headerHeight = header ? header.offsetHeight : 0; const viewportHeight = window.innerHeight - headerHeight; const elementHeight = pixCard.offsetHeight; const elementOffsetTop = pixCard.getBoundingClientRect().top + window.pageYOffset; const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2); window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
-            startPixTimer(15 * 60);
+            const pixCardEl = document.getElementById('pay-now-pix');
+            if (pixCardEl) {
+                const header = document.querySelector('.header');
+                const headerHeight = header ? header.offsetHeight : 0;
+                const viewportHeight = window.innerHeight - headerHeight;
+                const elementHeight = pixCardEl.offsetHeight;
+                const elementOffsetTop = pixCardEl.getBoundingClientRect().top + window.pageYOffset;
+                const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2);
+                window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
+            }
+            startPixTimer(900);
         }
 
         function copyPixCode() {
             const code = document.getElementById('pix-code-text').innerText;
             navigator.clipboard.writeText(code).then(() => {
-                // Atualiza botão principal
                 const btn = document.getElementById('btn-copy-pix-action');
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-                    btn.style.background = '#28a745';
-                    btn.style.color = 'white';
-                    setTimeout(() => { 
-                        btn.innerHTML = 'Copiar código'; 
-                        btn.style.background = ''; 
-                        btn.style.color = ''; 
-                    }, 2000);
-                }
+                const originalText = btn.innerText;
+                btn.innerText = 'Copiado!';
+                btn.style.background = '#27ae60';
                 
-                // Abre o modal e popula o código
-                document.getElementById('pixCodeCopied').value = code;
-                document.getElementById('pixCopiedModal').classList.add('active');
-                document.body.style.overflow = 'hidden';
+                // Abre o modal e popula o código (Adicionado conforme solicitado)
+                const pixCodeInput = document.getElementById('pixCodeCopied');
+                if (pixCodeInput) pixCodeInput.value = code;
+                const modal = document.getElementById('pixCopiedModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                setTimeout(() => { 
+                    btn.innerText = originalText; 
+                    btn.style.background = 'var(--primary)'; 
+                }, 2000);
             });
         }
+
         function fecharPixModal(btn) {
             if (btn.disabled) return;
             btn.disabled = true;
@@ -2049,6 +2017,7 @@ function renderOrderSummary() {
 
         function fecharPixModalDireto() {
             const modal = document.getElementById('pixCopiedModal');
+            if (!modal) return;
             modal.style.transition = 'opacity 0.2s ease';
             modal.style.opacity = '0';
             setTimeout(() => {
@@ -2060,24 +2029,27 @@ function renderOrderSummary() {
         }
 
         function copyAgain() {
-            const code = document.getElementById('pixCodeCopied').value;
+            const codeInput = document.getElementById('pixCodeCopied');
+            if (!codeInput) return;
+            const code = codeInput.value;
             navigator.clipboard.writeText(code).then(() => {
                 const btn = document.querySelector('.pix-copy-btn-compact');
+                if (!btn) return;
                 const originalContent = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
                 setTimeout(() => { btn.innerHTML = originalContent; }, 2000);
             });
         }
 
-
         function showDeliveryModal() {
-            const baseTotal = subtotalValue;
-            const deliveryTotal = baseTotal * 1.46;
-            document.getElementById('delivery-warning-text').innerHTML = `Ao escolher o pagamento na entrega você paga o valor <strong>R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</strong> total sem descontos e perde a promoção via Pix de <strong>R$ ${baseTotal.toFixed(2).replace('.', ',')}</strong>`;
             const modal = document.getElementById('delivery-modal');
-            document.getElementById('modal-step-1').style.display = 'block';
-            document.getElementById('modal-step-2').style.display = 'none';
-            document.getElementById('modal-step-3').style.display = 'none';
+            const step1 = document.getElementById('modal-step-1');
+            const step2 = document.getElementById('modal-step-2');
+            const step3 = document.getElementById('modal-step-3');
+            
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            step3.style.display = 'none';
             modal.classList.add('active');
         }
 
@@ -2112,21 +2084,63 @@ function renderOrderSummary() {
     </script>
 
 
-<!-- Modal de "Código Pix Copiado" Compacto -->
+
+
+    <!-- Modal de "Código Pix Copiado" Compacto -->
 <div id="pixCopiedModal" class="pix-modal-overlay">
     <div class="pix-modal-content">
         <button class="pix-modal-external-close" onclick="fecharPixModalDireto()">
             <i class="fas fa-times"></i>
         </button>
-        <div class="pix-modal-header">
-            <i class="fas fa-check-circle"></i>
-            <h2>Código Pix Copiado!</h2>
-            <div>
-    Agora siga as instruções abaixo para concluir o pagamento
-</div>
-        </div>
 
+<div class="pix-modal-header" style="text-align: center; max-width: 400px; margin: 0 auto;">
+    <!-- Ícone de Sucesso -->
+    <i class="fas fa-check-circle" style="display: block !important; margin: 0 auto 16px auto !important; color: #16a34a; font-size: 42px;"></i>
+    
+    <h2 style="margin: 0 0 8px 0 !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; color: #1e293b !important; font-weight: 700 !important; font-size: 20px;">Código Pix Copiado!</h2>
+    <p style="margin: 0 0 20px 0; font-family: 'Segoe UI', sans-serif; color: #64748b; font-size: 14px;">Finalize o pagamento no app do seu banco.</p>
+
+    <!-- Card de Identificação Profissional -->
+    <div style="all: initial !important; display: flex !important; align-items: center !important; gap: 14px !important; background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; margin: 20px 0 !important; width: 100% !important; box-sizing: border-box !important; font-family: 'Segoe UI', Roboto, sans-serif !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
         
+        <div style="display: flex !important; flex-direction: column !important; gap: 6px !important; text-align: left !important; width: 100% !important;">
+            <!-- Badge de Status -->
+            <span style="display: inline-block !important; color: #0054a6 !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.8px !important; margin-bottom: 2px !important;">
+                Vendedor DiskGás Acionado:
+            </span>
+
+            <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important;">
+                <!-- Nome do Vendedor -->
+                <span style="display: block !important; color: #0f172a !important; font-size: 16px !important; font-weight: 700 !important;">
+                    Entrega Rápida
+                </span>
+                
+                <!-- Selo de Verificação -->
+                <div style="display: flex !important; align-items: center !important; gap: 4px !important; background-color: #f0fdf4 !important; padding: 4px 8px !important; border-radius: 20px !important; border: 1px solid #bbf7d0 !important;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#16a34a" xmlns="http://w3.org">
+                        <path d="M12 1L14.31 3.52L17.61 4.15L18.04 7.52L21.1 9.27L20.13 12.55L21.1 15.83L18.04 17.58L17.61 20.95L14.31 21.58L12 24.1L9.69 21.58L6.39 20.95L5.96 17.58L2.9 15.83L3.87 12.55L2.9 9.27L5.96 7.52L6.39 4.15L9.69 3.52L12 1Z"/>
+                        <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span style="color: #15803d !important; font-size: 10px !important; font-weight: 700 !important; text-transform: uppercase;">Autorizado</span>
+                </div>
+            </div>
+
+            <div style="display: flex !important; align-items: center !important; gap: 8px !important; margin-top: 4px !important;">
+                <!-- Tag da Marca -->
+                <span style="background-color: #0054a6 !important; color: #ffffff !important; font-size: 10px !important; font-weight: 800 !important; padding: 3px 10px !important; border-radius: 6px !important; text-transform: uppercase;">
+                    DiskGás
+                </span>
+                <!-- Unidade Local -->
+                <span style="color: #64748b !important; font-size: 11px !important; font-weight: 500;">
+                    Acionamos o vendedor mais próximo a Você
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
         <div class="pix-instructions-list">
             <ul>
                 <li><i class="fas fa-mobile-alt"></i><span>Acesse o App do seu banco.</span></li>
@@ -2134,7 +2148,6 @@ function renderOrderSummary() {
                 <li><i class="fas fa-paste"></i><span>Cole o código e finalize.</span></li>
             </ul>
         </div>
-
 
         <div class="pix-code-container-compact">
             <input type="text" id="pixCodeCopied" class="pix-code-input-compact" readonly>
