@@ -1,9 +1,12 @@
 services:
   - type: web
-    name: checkout-pix-service
-    env: docker
+    name: appmax-checkout
+    env: node
     plan: free
-    region: ohio
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
+      - key: APPMAX_TOKEN
+        sync: false
       - key: PORT
         value: 3000
