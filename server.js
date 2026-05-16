@@ -1,68 +1,88 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+const axios = require('axios');
 const cors = require('cors');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static('public'));
 
-// ============================================================
-// COLOQUE SEU ACCESS TOKEN DO MERCADO PAGO ABAIXO
-// ============================================================
-const SEU_ACCESS_TOKEN = "APP_USR-5824276345834591-043023-fdf41a17c3417b335770a38c0525254e-3346775579"; 
-// ============================================================
+const APPMAX_API_KEY = process.env.APPMAX_API_KEY;
+const APPMAX_URL = 'https://api.appmax.com.br/v1';
 
-const client = new MercadoPagoConfig({ 
-    accessToken: SEU_ACCESS_TOKEN 
-});
-const payment = new Payment(client);
-
-app.post('/process_payment', async (req, res) => {
+// Endpoint para gerar o Pix
+app.post('/api/pix', async (req, res) => {
     try {
-        const { transaction_amount, description, payer } = req.body;
+        const { payer_name, payer_cpf, payer_phone, amount } = req.body;
 
-        const paymentData = {
-            body: {
-                transaction_amount: parseFloat(transaction_amount),
-                description: description || 'Pagamento de Pedido',
-                payment_method_id: 'boleto',
-                payer: {
-                    email: payer.email,
-                    first_name: payer.first_name,
-                    last_name: payer.last_name,
-                    identification: {
-                        type: payer.identification.type,
-                        number: payer.identification.number
-                    },
-                    address: {
-                        zip_code: payer.address.zip_code,
-                        street_name: payer.address.street_name,
-                        street_number: payer.address.street_number,
-                        neighborhood: payer.address.neighborhood,
-                        city: payer.address.city,
-                        federal_unit: payer.address.federal_unit
-                    }
-                }
-            }
-        };
-
-        const result = await payment.create(paymentData);
-        
-        res.status(201).json({
-            id: result.id,
-            status: result.status,
-            barcode: result.point_of_interaction.transaction_data.barcode.content,
-            digitable_line: result.point_of_interaction.transaction_data.transaction_id,
-            ticket_url: result.point_of_interaction.transaction_data.ticket_url
+        // 1. Criar ou Atualizar Cliente
+        const customerResponse = await axios.post(`${APPMAX_URL}/customers`, {
+            access_token: APPMAX_API_KEY,
+            first_name: payer_name.split(' ')[0],
+            last_name: payer_name.split(' ').slice(1).join(' ') || 'Silva',
+            email: `cliente_${Date.now()}@email.com`, // Email genérico se não fornecido
+            phone: payer_phone.replace(/\D/g, ''),
+            document_number: payer_cpf.replace(/\D/g, '')
         });
 
+        if (!customerResponse.data.success) {
+            return res.status(400).json({ success: false, message: 'Erro ao criar cliente na Appmax' });
+        }
+
+        const customerId = customerResponse.data.data.id;
+
+        // 2. Criar Pedido
+        const orderResponse = await axios.post(`${APPMAX_URL}/orders`, {
+            access_token: APPMAX_API_KEY,
+            customer_id: customerId,
+            products: [
+                {
+                    sku: 'PROD001',
+                    name: 'Produto Checkout',
+                    qty: 1,
+                    unit_value: Math.round(parseFloat(amount) * 100) // Appmax usa centavos em alguns endpoints, mas v1/orders parece usar valor real ou centavos dependendo da config. Ajustando para centavos se necessário.
+                }
+            ],
+            total_value: Math.round(parseFloat(amount) * 100)
+        });
+
+        if (!orderResponse.data.success) {
+            return res.status(400).json({ success: false, message: 'Erro ao criar pedido na Appmax' });
+        }
+
+        const orderId = orderResponse.data.data.id;
+
+        // 3. Efetuar Pagamento Pix
+        const paymentResponse = await axios.post(`${APPMAX_URL}/payments/pix`, {
+            access_token: APPMAX_API_KEY,
+            order_id: orderId,
+            payment_data: {
+                pix: {
+                    document_number: payer_cpf.replace(/\D/g, '')
+                }
+            }
+        });
+
+        if (paymentResponse.data.success) {
+            res.json({
+                success: true,
+                pixCode: paymentResponse.data.data.pix_code_emv,
+                qrCode: paymentResponse.data.data.pix_qrcode
+            });
+        } else {
+            res.status(400).json({ success: false, message: 'Erro ao gerar Pix na Appmax' });
+        }
+
     } catch (error) {
-        console.error('Erro ao gerar boleto:', error);
-        res.status(500).json({ error: 'Erro ao processar o pagamento' });
+        console.error('Erro na integração Appmax:', error.response ? error.response.data : error.message);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor' });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
