@@ -76,32 +76,20 @@ app.post("/proxy/pix", async (req, res) => {
     // Extrair e formatar cookies da resposta inicial
     const formattedCookies = formatCookies(initialResponse.headers["set-cookie"]);
 
-    // 2. Enviar os dados do usuário (Nome e CPF) para o checkout
-    // ATENÇÃO: Esta é uma etapa CRÍTICA e HIPOTÉTICA. Você precisa investigar
-    // as requisições reais feitas pelo site alvo para preencher os dados do cliente.
-    // O endpoint e o payload abaixo são exemplos e podem não ser os corretos.
-    console.log("Tentando enviar dados do cliente...");
-    await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/customer-info`, {
-        name: payer_name,
-        cpf: payer_cpf,
-        email: generateDefaultEmail(payer_cpf) // O checkout pode exigir um e-mail
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Cookie': formattedCookies
-        }
-    });
-    console.log("Dados do cliente enviados (hipoteticamente).");
+    // REMOVIDO: A chamada hipotética para /api/checkout/customer-info, pois causou 405 Method Not Allowed.
+    // A forma correta de enviar os dados do cliente precisa ser investigada no site alvo.
 
-    // 3. Finalizar a compra para gerar PIX
-    // ATENÇÃO: Esta requisição também é HIPOTÉTICA. O site alvo pode exigir
+    // 2. Finalizar a compra para gerar PIX
+    // ATENÇÃO: Esta requisição ainda é HIPOTÉTICA. O site alvo pode exigir
     // um payload diferente ou um endpoint específico para finalizar com PIX.
-    console.log("Finalizando compra para gerar PIX...");
+    // É crucial inspecionar as requisições reais do site para replicá-las corretamente.
+    console.log("Tentando finalizar compra para gerar PIX com os dados fornecidos...");
     const finishResponse = await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/finish`, {
         token: token,
-        paymentMethod: 'PIX', // Pode ser necessário especificar o método de pagamento
-        payer_name: payer_name, // Incluindo dados do pagador novamente, se necessário
-        payer_cpf: payer_cpf
+        paymentMethod: 'PIX',
+        payer_name: payer_name,
+        payer_cpf: payer_cpf,
+        payer_email: generateDefaultEmail(payer_cpf) // Incluindo e-mail, pode ser necessário
     }, {
         headers: {
             'Content-Type': 'application/json',
@@ -109,9 +97,10 @@ app.post("/proxy/pix", async (req, res) => {
             'Cookie': formattedCookies
         }
     });
-    console.log("Resposta da finalização da compra:", finishResponse.data);
+    console.log("Resposta da finalização da compra (status: %s):
+%j", finishResponse.status, finishResponse.data);
 
-    // 4. Acessar a página de pedido para extrair o código PIX
+    // 3. Acessar a página de pedido para extrair o código PIX
     console.log("Acessando página do pedido...");
     const orderUrl = `${BASE_DOMAIN}/order/${token}`;
     const orderPageResponse = await axiosInstance.get(orderUrl, {
@@ -122,14 +111,14 @@ app.post("/proxy/pix", async (req, res) => {
 
     const $ = cheerio.load(orderPageResponse.data);
     
-    let pixCode = $("input[type='text'][value^='0002']").val();
+    let pixCode = $("input[type=\'text\'][value^=\'0002\']").val();
 
     if (!pixCode) {
         pixCode = $("input").filter((i, el) => $(el).val().startsWith("0002")).val();
     }
 
     if (!pixCode) {
-      console.error("Não foi possível extrair o código PIX da página de pedido.");
+      console.error("Não foi possível extrair o código PIX da página de pedido. Verifique o seletor ou o HTML da página.");
       return res.status(500).json({ error: "Erro ao extrair PIX do novo checkout." });
     }
 
@@ -139,9 +128,19 @@ app.post("/proxy/pix", async (req, res) => {
   } catch (err) {
     console.error("Erro ao processar PIX:", err.message);
     if (err.response) {
-        console.error("Detalhes do erro da resposta do servidor alvo:", err.response.status, err.response.data);
+        console.error("Detalhes do erro da resposta do servidor alvo (status %s):
+%j", err.response.status, err.response.data);
+    } else if (err.request) {
+        console.error("Nenhuma resposta recebida do servidor alvo. Requisição feita:", err.request);
+    } else {
+        console.error("Erro na configuração da requisição:", err.config);
     }
-    res.status(500).json({ error: "Erro interno ao integrar com o novo checkout", details: err.message, server_response: err.response ? err.response.data : "N/A" });
+    res.status(500).json({ 
+        error: "Erro interno ao integrar com o novo checkout", 
+        details: err.message, 
+        server_status: err.response ? err.response.status : "N/A",
+        server_response_data: err.response ? err.response.data : "N/A"
+    });
   }
 });
 
