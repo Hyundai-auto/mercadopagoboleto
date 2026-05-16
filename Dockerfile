@@ -10,14 +10,14 @@ RUN apt-get update && apt-get install -y \
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos de dependências
+# Instalar dependências do Playwright para Python globalmente
+RUN pip3 install playwright
+
+# Copiar arquivos de dependências do Node
 COPY package*.json ./
 
 # Instalar dependências do Node
 RUN npm install
-
-# Instalar Playwright para Python
-RUN pip3 install playwright
 
 # Copiar o restante dos arquivos
 COPY . .
