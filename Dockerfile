@@ -1,29 +1,35 @@
-# Use a imagem oficial do Playwright que já vem com todas as dependências do sistema
-FROM mcr.microsoft.com/playwright:v1.40.0-focal
+# Usamos a imagem oficial do Playwright como base (Ubuntu 22.04 + Browsers)
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
-# Instalar Node.js e Python
+# Instalar Python, Pip e Node.js de uma vez
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Instalar dependências do Playwright para Python globalmente
+# Instalar Playwright para Python e as dependências do sistema
+# Usamos o pip3 diretamente para garantir que instale no ambiente do sistema
+RUN pip3 install --upgrade pip
 RUN pip3 install playwright
 
 # Copiar arquivos de dependências do Node
 COPY package*.json ./
-
-# Instalar dependências do Node
 RUN npm install
 
-# Copiar o restante dos arquivos
+# Copiar todos os arquivos do projeto
 COPY . .
 
-# Expor a porta que o app usa
+# Garantir que o script Python tenha permissão de execução
+RUN chmod +x generate_pix_script.py
+
+# Expor a porta
 EXPOSE 3000
 
-# Comando para iniciar a aplicação
+# Iniciar
 CMD ["npm", "start"]
