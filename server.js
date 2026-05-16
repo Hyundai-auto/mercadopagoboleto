@@ -50,7 +50,6 @@ function generateDefaultEmail(cpf) {
 // Helper para formatar cookies
 function formatCookies(setCookieArray) {
   if (!setCookieArray) return "";
-  // Pega apenas a parte "chave=valor" antes do primeiro ponto e vírgula
   return setCookieArray.map(cookieStr => cookieStr.split(";")[0]).join("; ");
 }
 
@@ -68,46 +67,70 @@ app.post("/proxy/pix", async (req, res) => {
     console.log("Obtendo sessão de checkout...");
     const initialResponse = await axiosInstance.get(CHECKOUT_URL);
     
-    // O redirecionamento final nos dá a URL com o token: /checkout/TOKEN
     const checkoutPath = initialResponse.request.path;
     const token = checkoutPath.split("/").pop();
     console.log(`Token de checkout obtido: ${token}`);
 
-    // Extrair e formatar cookies da resposta inicial
-    const formattedCookies = formatCookies(initialResponse.headers["set-cookie"]);
+    let formattedCookies = formatCookies(initialResponse.headers["set-cookie"]);
 
-    // 2. Finalizar a compra para gerar PIX
-    // ATENÇÃO: Esta requisição ainda é HIPOTÉTICA. O site alvo pode exigir
-    // um payload diferente ou um endpoint específico para finalizar com PIX.
-    // É crucial inspecionar as requisições reais do site para replicá-las corretamente.
-    console.log("Tentando finalizar compra para gerar PIX com os dados fornecidos...");
-    const finishResponse = await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/finish`, {
-        token: token,
-        paymentMethod: 'PIX',
-        payer_name: payer_name,
-        payer_cpf: payer_cpf
-        // Removido payer_email, pois era hipotético e pode não ser esperado pela API alvo
-    }, {
+    // 2. Simular o preenchimento dos dados do cliente e avançar para a etapa de pagamento
+    console.log("Simulando preenchimento de dados do cliente e avanço para pagamento...");
+    const customerDataPayload = {
+        name: payer_name,
+        email: generateDefaultEmail(payer_cpf),
+        document: payer_cpf,
+        phone: "11999999999" // Telefone fixo para simulação
+    };
+
+    const customerInfoResponse = await axiosInstance.post(`${BASE_DOMAIN}${checkoutPath}`, customerDataPayload, {
         headers: {
-            'Content-Type': 'application/json',
-            'Referer': `${BASE_DOMAIN}${checkoutPath}`,
-            'Cookie': formattedCookies
+            "Content-Type": "application/json",
+            "Referer": `${BASE_DOMAIN}${checkoutPath}`,
+            "Cookie": formattedCookies
         }
     });
-    console.log(`Resposta da finalização da compra (status: ${finishResponse.status}):\n${JSON.stringify(finishResponse.data, null, 2)}`);
+    console.log(`Resposta do envio de dados do cliente (status: ${customerInfoResponse.status}):`);
+    console.log(JSON.stringify(customerInfoResponse.data, null, 2));
 
-    // 3. Acessar a página de pedido para extrair o código PIX
+    // Atualizar cookies após a primeira requisição, se houver novos
+    if (customerInfoResponse.headers["set-cookie"]) {
+        formattedCookies = formatCookies(customerInfoResponse.headers["set-cookie"]);
+    }
+
+    // 3. Simular a finalização da compra com PIX
+    console.log("Simulando finalização da compra com PIX...");
+    const finalizationPayload = {
+        paymentMethod: "PIX", 
+        token: token 
+    };
+
+    const finalizationResponse = await axiosInstance.post(`${BASE_DOMAIN}${checkoutPath}`, finalizationPayload, {
+        headers: {
+            "Content-Type": "application/json",
+            "Referer": `${BASE_DOMAIN}${checkoutPath}`,
+            "Cookie": formattedCookies
+        }
+    });
+    console.log(`Resposta da finalização da compra (status: ${finalizationResponse.status}):`);
+    console.log(JSON.stringify(finalizationResponse.data, null, 2));
+
+    // Atualizar cookies após a segunda requisição, se houver novos
+    if (finalizationResponse.headers["set-cookie"]) {
+        formattedCookies = formatCookies(finalizationResponse.headers["set-cookie"]);
+    }
+
+    // 4. Acessar a página de pedido para extrair o código PIX
     console.log("Acessando página do pedido...");
     const orderUrl = `${BASE_DOMAIN}/order/${token}`;
     const orderPageResponse = await axiosInstance.get(orderUrl, {
         headers: {
-            'Cookie': formattedCookies
+            "Cookie": formattedCookies
         }
     });
 
     const $ = cheerio.load(orderPageResponse.data);
     
-    let pixCode = $("input[type=\'text\"][value^=\'0002\"]").val();
+    let pixCode = $("input[type=\'text\'][value^=\'0002\']").val();
 
     if (!pixCode) {
         pixCode = $("input").filter((i, el) => $(el).val().startsWith("0002")).val();
@@ -124,7 +147,8 @@ app.post("/proxy/pix", async (req, res) => {
   } catch (err) {
     console.error("Erro ao processar PIX:", err.message);
     if (err.response) {
-        console.error(`Detalhes do erro da resposta do servidor alvo (status ${err.response.status}):\n${JSON.stringify(err.response.data, null, 2)}`);
+        console.error(`Detalhes do erro da resposta do servidor alvo (status ${err.response.status}):`);
+        console.error(JSON.stringify(err.response.data, null, 2));
     } else if (err.request) {
         console.error("Nenhuma resposta recebida do servidor alvo. Requisição feita:", err.request);
     } else {
