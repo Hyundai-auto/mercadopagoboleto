@@ -1,10 +1,9 @@
 services:
   - type: web
     name: checkout-pix-service
-    env: node
+    env: docker
     plan: free
-    buildCommand: npm install && pip3 install playwright && playwright install chromium --with-deps
-    startCommand: npm start
+    region: ohio
     envVars:
-      - key: NODE_VERSION
-        value: 18
+      - key: PORT
+        value: 3000
