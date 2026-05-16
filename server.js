@@ -151,4 +151,3 @@ app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
-}`));
