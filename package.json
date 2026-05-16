@@ -1,7 +1,7 @@
 {
-  "name": "checkout-proxy-pix",
+  "name": "checkout-pix-integration",
   "version": "1.0.0",
-  "description": "Proxy para geração de PIX em checkout externo",
+  "description": "Integração de checkout com geração de PIX externo",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,8 +9,6 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
-    "cheerio": "^1.0.0-rc.12",
-    "cookie-parser": "^1.4.6",
     "express": "^4.18.2"
   }
 }
