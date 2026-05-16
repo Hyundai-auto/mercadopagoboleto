@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout Seguro</title>
+    <!-- 
+        AVISO: O CDN do Tailwind CSS (cdn.tailwindcss.com) não deve ser usado em produção.
+        Para produção, instale o Tailwind como um plugin PostCSS ou use o Tailwind CLI.
+        Mais informações: https://tailwindcss.com/docs/installation
+    -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -70,7 +75,7 @@
                     alert('Erro ao gerar PIX: ' + (data.error || 'Erro desconhecido'));
                 }
             } catch (error) {
-                alert('Erro na conexão com o servidor');
+                alert('Erro na conexão com o servidor: ' + error.message);
             } finally {
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('btn-generate').disabled = false;
