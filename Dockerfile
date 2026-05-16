@@ -1,7 +1,7 @@
-# Usamos a imagem oficial do Playwright como base (Ubuntu 22.04 + Browsers)
+# Imagem base robusta com Playwright e dependências
 FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
-# Instalar Python, Pip e Node.js de uma vez
+# Instalar Python, Pip e Node.js
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y \
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Instalar Playwright para Python e as dependências do sistema
-# Usamos o pip3 diretamente para garantir que instale no ambiente do sistema
+# Instalar Playwright para Python usando a flag para ignorar o bloqueio de pacotes do sistema
+# Isso é seguro dentro de um container Docker
 RUN pip3 install --upgrade pip
-RUN pip3 install playwright
+RUN pip3 install playwright --break-system-packages
 
 # Copiar arquivos de dependências do Node
 COPY package*.json ./
