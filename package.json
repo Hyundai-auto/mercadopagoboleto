@@ -1,15 +1,18 @@
 {
-  "name": "checkout-pix-integration",
+  "name": "appmax-checkout",
   "version": "1.0.0",
-  "description": "Integração de checkout com geração de PIX externo",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "postinstall": "echo 'Dependencies handled by Docker'"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "dependencies": {
-    "axios": "^1.6.2",
-    "express": "^4.18.2"
+    "axios": "^1.16.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
   }
 }
