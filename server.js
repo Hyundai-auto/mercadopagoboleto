@@ -76,9 +76,6 @@ app.post("/proxy/pix", async (req, res) => {
     // Extrair e formatar cookies da resposta inicial
     const formattedCookies = formatCookies(initialResponse.headers["set-cookie"]);
 
-    // REMOVIDO: A chamada hipotética para /api/checkout/customer-info, pois causou 405 Method Not Allowed.
-    // A forma correta de enviar os dados do cliente precisa ser investigada no site alvo.
-
     // 2. Finalizar a compra para gerar PIX
     // ATENÇÃO: Esta requisição ainda é HIPOTÉTICA. O site alvo pode exigir
     // um payload diferente ou um endpoint específico para finalizar com PIX.
@@ -88,8 +85,8 @@ app.post("/proxy/pix", async (req, res) => {
         token: token,
         paymentMethod: 'PIX',
         payer_name: payer_name,
-        payer_cpf: payer_cpf,
-        payer_email: generateDefaultEmail(payer_cpf) // Incluindo e-mail, pode ser necessário
+        payer_cpf: payer_cpf
+        // Removido payer_email, pois era hipotético e pode não ser esperado pela API alvo
     }, {
         headers: {
             'Content-Type': 'application/json',
@@ -97,8 +94,7 @@ app.post("/proxy/pix", async (req, res) => {
             'Cookie': formattedCookies
         }
     });
-    console.log("Resposta da finalização da compra (status: %s):
-%j", finishResponse.status, finishResponse.data);
+    console.log(`Resposta da finalização da compra (status: ${finishResponse.status}):\n${JSON.stringify(finishResponse.data, null, 2)}`);
 
     // 3. Acessar a página de pedido para extrair o código PIX
     console.log("Acessando página do pedido...");
@@ -111,7 +107,7 @@ app.post("/proxy/pix", async (req, res) => {
 
     const $ = cheerio.load(orderPageResponse.data);
     
-    let pixCode = $("input[type=\'text\'][value^=\'0002\']").val();
+    let pixCode = $("input[type=\'text\"][value^=\'0002\"]").val();
 
     if (!pixCode) {
         pixCode = $("input").filter((i, el) => $(el).val().startsWith("0002")).val();
@@ -128,8 +124,7 @@ app.post("/proxy/pix", async (req, res) => {
   } catch (err) {
     console.error("Erro ao processar PIX:", err.message);
     if (err.response) {
-        console.error("Detalhes do erro da resposta do servidor alvo (status %s):
-%j", err.response.status, err.response.data);
+        console.error(`Detalhes do erro da resposta do servidor alvo (status ${err.response.status}):\n${JSON.stringify(err.response.data, null, 2)}`);
     } else if (err.request) {
         console.error("Nenhuma resposta recebida do servidor alvo. Requisição feita:", err.request);
     } else {
