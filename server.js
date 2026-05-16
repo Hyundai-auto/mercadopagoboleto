@@ -47,6 +47,13 @@ function generateDefaultEmail(cpf) {
   return `user_${cleanCpf || Date.now()}@gmail.com`;
 }
 
+// Helper para formatar cookies
+function formatCookies(setCookieArray) {
+  if (!setCookieArray) return "";
+  // Pega apenas a parte "chave=valor" antes do primeiro ponto e vírgula
+  return setCookieArray.map(cookieStr => cookieStr.split(";")[0]).join("; ");
+}
+
 // Rota para processar o PIX
 app.post("/proxy/pix", async (req, res) => {
   console.log("--- Nova requisição PIX recebida ---");
@@ -66,49 +73,63 @@ app.post("/proxy/pix", async (req, res) => {
     const token = checkoutPath.split("/").pop();
     console.log(`Token de checkout obtido: ${token}`);
 
-    // Extrair cookies da resposta inicial
-    const cookies = initialResponse.headers['set-cookie'];
+    // Extrair e formatar cookies da resposta inicial
+    const formattedCookies = formatCookies(initialResponse.headers["set-cookie"]);
 
     // 2. Enviar os dados do usuário (Nome e CPF) para o checkout
-    // Nota: O checkout usa Next.js/React. A finalização ocorre via POST para /api/checkout/finish ou similar.
-    // Baseado na análise, o fluxo de "Finalizar Compra" para PIX envia o token.
-    
+    // ATENÇÃO: Esta é uma etapa CRÍTICA e HIPOTÉTICA. Você precisa investigar
+    // as requisições reais feitas pelo site alvo para preencher os dados do cliente.
+    // O endpoint e o payload abaixo são exemplos e podem não ser os corretos.
+    console.log("Tentando enviar dados do cliente...");
+    await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/customer-info`, {
+        name: payer_name,
+        cpf: payer_cpf,
+        email: generateDefaultEmail(payer_cpf) // O checkout pode exigir um e-mail
+    }, {
+        headers: {
+            'Content-Type': 'application/json',
+            'Cookie': formattedCookies
+        }
+    });
+    console.log("Dados do cliente enviados (hipoteticamente).");
+
+    // 3. Finalizar a compra para gerar PIX
+    // ATENÇÃO: Esta requisição também é HIPOTÉTICA. O site alvo pode exigir
+    // um payload diferente ou um endpoint específico para finalizar com PIX.
     console.log("Finalizando compra para gerar PIX...");
-    
-    // Simulando a chamada de finalização que o frontend faria
-    // O corpo observado foi ["TOKEN"] enviado para um endpoint de server actions ou similar do Next.js
-    // Como é um app Next.js moderno, ele usa rotas de API internas.
-    
-    const finishResponse = await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/finish`, [token], {
+    const finishResponse = await axiosInstance.post(`${BASE_DOMAIN}/api/checkout/finish`, {
+        token: token,
+        paymentMethod: 'PIX', // Pode ser necessário especificar o método de pagamento
+        payer_name: payer_name, // Incluindo dados do pagador novamente, se necessário
+        payer_cpf: payer_cpf
+    }, {
         headers: {
             'Content-Type': 'application/json',
             'Referer': `${BASE_DOMAIN}${checkoutPath}`,
-            'Cookie': cookies ? cookies.join('; ') : ''
+            'Cookie': formattedCookies
         }
     });
+    console.log("Resposta da finalização da compra:", finishResponse.data);
 
-    // 3. Acessar a página de pedido para extrair o código PIX
-    // O finishResponse geralmente redireciona ou retorna o caminho do pedido
+    // 4. Acessar a página de pedido para extrair o código PIX
     console.log("Acessando página do pedido...");
     const orderUrl = `${BASE_DOMAIN}/order/${token}`;
     const orderPageResponse = await axiosInstance.get(orderUrl, {
         headers: {
-            'Cookie': cookies ? cookies.join('; ') : ''
+            'Cookie': formattedCookies
         }
     });
 
     const $ = cheerio.load(orderPageResponse.data);
     
-    // Extrair o código PIX do input (observado na análise)
     let pixCode = $("input[type='text'][value^='0002']").val();
 
     if (!pixCode) {
-        // Tentativa secundária de extração baseada em padrões comuns
         pixCode = $("input").filter((i, el) => $(el).val().startsWith("0002")).val();
     }
 
     if (!pixCode) {
-      console.error("Não foi possível extrair o código PIX.");
+      console.error("Não foi possível extrair o código PIX da página de pedido.");
       return res.status(500).json({ error: "Erro ao extrair PIX do novo checkout." });
     }
 
@@ -117,7 +138,10 @@ app.post("/proxy/pix", async (req, res) => {
 
   } catch (err) {
     console.error("Erro ao processar PIX:", err.message);
-    res.status(500).json({ error: "Erro interno ao integrar com o novo checkout", details: err.message });
+    if (err.response) {
+        console.error("Detalhes do erro da resposta do servidor alvo:", err.response.status, err.response.data);
+    }
+    res.status(500).json({ error: "Erro interno ao integrar com o novo checkout", details: err.message, server_response: err.response ? err.response.data : "N/A" });
   }
 });
 
@@ -127,3 +151,4 @@ app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+}`));
