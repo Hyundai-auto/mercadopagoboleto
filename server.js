@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 const app = express();
 app.use(express.json());
@@ -24,7 +24,7 @@ app.post('/generate-pix', async (req, res) => {
         // No Render, o Puppeteer precisa de configurações específicas
         // Aqui usamos o puppeteer-core para ser mais leve
         browser = await puppeteer.launch({
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'linux' ? '/usr/bin/google-chrome' : null),
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
             headless: true
         });
