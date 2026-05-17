@@ -14,6 +14,34 @@ app.use(express.static('public'));
 const APPMAX_API_URL = 'https://api.appmax.com.br/v1';
 const APPMAX_API_KEY = process.env.APPMAX_API_KEY;
 
+// Função auxiliar para fazer requisições à Appmax tentando diferentes métodos de autenticação
+async function appmaxRequest(endpoint, data) {
+    const url = `${APPMAX_API_URL}${endpoint}`;
+    
+    // Tentativa 1: access_token no corpo (Padrão documentado para v1)
+    try {
+        const response = await axios.post(url, {
+            ...data,
+            access_token: APPMAX_API_KEY
+        });
+        return response.data;
+    } catch (error) {
+        // Se falhar com 401, tentamos o método Bearer Token
+        if (error.response && error.response.status === 401) {
+            try {
+                const response = await axios.post(url, data, {
+                    headers: { 'Authorization': `Bearer ${APPMAX_API_KEY}` }
+                });
+                return response.data;
+            } catch (innerError) {
+                // Se ambos falharem, lançamos o erro original
+                throw error;
+            }
+        }
+        throw error;
+    }
+}
+
 // Endpoint para gerar o Pix
 app.post('/api/pix', async (req, res) => {
     try {
@@ -27,28 +55,26 @@ app.post('/api/pix', async (req, res) => {
         const lastName = payer_name.split(' ').slice(1).join(' ') || 'Sobrenome';
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
+        console.log(`Iniciando processamento Pix para: ${payer_name} - CPF: ${payer_cpf}`);
+
         // 1. Criar ou atualizar o cliente
-        // Nota: A Appmax exige access_token no corpo da requisição para v1
-        const customerResponse = await axios.post(`${APPMAX_API_URL}/customers`, {
-            access_token: APPMAX_API_KEY,
+        const customerData = await appmaxRequest('/customers', {
             first_name: firstName,
             last_name: lastName,
-            email: `cliente_${payer_cpf}@email.com`,
+            email: `cliente_${payer_cpf.replace(/\D/g, '')}@email.com`,
             phone: payer_phone.replace(/\D/g, ''),
             document_number: payer_cpf.replace(/\D/g, ''),
             ip: clientIp
         });
 
-        if (!customerResponse.data.success) {
-            console.error('Erro ao criar cliente:', customerResponse.data);
-            throw new Error(customerResponse.data.message || 'Erro ao criar cliente na Appmax');
+        if (!customerData.success) {
+            throw new Error(customerData.message || 'Erro ao criar cliente na Appmax');
         }
 
-        const customerId = customerResponse.data.data.id;
+        const customerId = customerData.data.id;
 
         // 2. Criar o pedido
-        const orderResponse = await axios.post(`${APPMAX_API_URL}/orders`, {
-            access_token: APPMAX_API_KEY,
+        const orderData = await appmaxRequest('/orders', {
             customer_id: customerId,
             products: [
                 {
@@ -61,16 +87,14 @@ app.post('/api/pix', async (req, res) => {
             total_value: Math.round(parseFloat(amount) * 100)
         });
 
-        if (!orderResponse.data.success) {
-            console.error('Erro ao criar pedido:', orderResponse.data);
-            throw new Error(orderResponse.data.message || 'Erro ao criar pedido na Appmax');
+        if (!orderData.success) {
+            throw new Error(orderData.message || 'Erro ao criar pedido na Appmax');
         }
 
-        const orderId = orderResponse.data.data.id;
+        const orderId = orderData.data.id;
 
         // 3. Efetuar pagamento via Pix
-        const paymentResponse = await axios.post(`${APPMAX_API_URL}/payments/pix`, {
-            access_token: APPMAX_API_KEY,
+        const paymentData = await appmaxRequest('/payments/pix', {
             order_id: orderId,
             payment_data: {
                 pix: {
@@ -79,33 +103,29 @@ app.post('/api/pix', async (req, res) => {
             }
         });
 
-        if (paymentResponse.data.success) {
+        if (paymentData.success) {
+            console.log('Pix gerado com sucesso!');
             res.json({
                 success: true,
-                pixCode: paymentResponse.data.data.pix_code,
-                qrCodeImage: paymentResponse.data.data.pix_qr_code
+                pixCode: paymentData.data.pix_code,
+                qrCodeImage: paymentData.data.pix_qr_code
             });
         } else {
-            console.error('Erro ao processar Pix:', paymentResponse.data);
-            res.status(500).json({ success: false, message: paymentResponse.data.message || 'Erro ao processar pagamento Pix' });
+            throw new Error(paymentData.message || 'Erro ao processar pagamento Pix');
         }
 
     } catch (error) {
         const errorData = error.response ? error.response.data : error.message;
-        console.error('Erro na integração Appmax:', errorData);
+        console.error('Erro na integração Appmax:', JSON.stringify(errorData));
         
-        // Se o erro for Unauthorized, avisar o usuário sobre a chave de API
+        let userMessage = 'Erro ao processar com Appmax';
         if (error.response && error.response.status === 401) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Chave de API (access_token) inválida ou não autorizada. Verifique suas credenciais na Appmax.',
-                details: errorData
-            });
+            userMessage = 'Erro de Autenticação: Sua chave de API (access_token) parece ser inválida ou não tem permissão para esta operação.';
         }
 
-        res.status(500).json({ 
+        res.status(error.response ? error.response.status : 500).json({ 
             success: false, 
-            message: 'Erro interno no servidor ao processar com Appmax',
+            message: userMessage,
             details: errorData
         });
     }
