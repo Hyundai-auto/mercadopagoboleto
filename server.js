@@ -4,6 +4,7 @@ import cors from 'cors';
 import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,10 +44,29 @@ app.post('/generate-pix', async (req, res) => {
             headless: "new",
         };
 
-        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-            options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        } else if (process.platform === 'linux') {
-            options.executablePath = '/usr/bin/google-chrome';
+        // Detecção inteligente do executável do Chrome no Render
+        const chromePaths = [
+            process.env.PUPPETEER_EXECUTABLE_PATH,
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/opt/google/chrome/google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser'
+        ];
+
+        let foundPath = null;
+        for (const p of chromePaths) {
+            if (p && fs.existsSync(p)) {
+                foundPath = p;
+                break;
+            }
+        }
+
+        if (foundPath) {
+            console.log(`Usando Chrome em: ${foundPath}`);
+            options.executablePath = foundPath;
+        } else {
+            console.log('Aviso: Nenhum caminho de Chrome fixo encontrado. Tentando lançamento padrão.');
         }
 
         browser = await puppeteer.launch(options);
