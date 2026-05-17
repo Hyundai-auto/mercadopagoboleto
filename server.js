@@ -18,59 +18,63 @@ const APPMAX_API_URL = IS_SANDBOX
     : 'https://api.appmax.com.br/v1';
 const APPMAX_API_KEY = (process.env.APPMAX_API_KEY || '').trim();
 
-console.log(`[Appmax] Iniciando em modo: ${IS_SANDBOX ? 'SANDBOX' : 'PRODUÇÃO'}`);
-console.log(`[Appmax] URL da API: ${APPMAX_API_URL}`);
-console.log(`[Appmax] Chave configurada: ${APPMAX_API_KEY ? 'SIM (Tamanho: ' + APPMAX_API_KEY.length + ')' : 'NÃO'}`);
+console.log(`[Appmax] Modo: ${IS_SANDBOX ? 'SANDBOX' : 'PRODUÇÃO'}`);
+console.log(`[Appmax] URL: ${APPMAX_API_URL}`);
 
 /**
- * Função centralizada para requisições Appmax
+ * Função centralizada para requisições Appmax com Headers de compatibilidade
  */
 async function appmaxRequest(endpoint, data) {
     const baseUrl = `${APPMAX_API_URL}${endpoint}`;
     
-    // Lista de estratégias de autenticação
+    // Headers padrão para evitar 403 e garantir JSON
+    const defaultHeaders = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Appmax-Checkout-Integration/1.0'
+    };
+
     const strategies = [
         {
             name: 'BODY (access_token)',
-            fn: () => axios.post(baseUrl, { ...data, access_token: APPMAX_API_KEY })
+            fn: () => axios.post(baseUrl, { ...data, access_token: APPMAX_API_KEY }, { headers: defaultHeaders })
         },
         {
             name: 'QUERY PARAM (?access_token=)',
-            fn: () => axios.post(`${baseUrl}?access_token=${APPMAX_API_KEY}`, data)
+            fn: () => axios.post(`${baseUrl}?access_token=${APPMAX_API_KEY}`, data, { headers: defaultHeaders })
         },
         {
             name: 'HEADER (Bearer Token)',
-            fn: () => axios.post(baseUrl, data, { headers: { 'Authorization': `Bearer ${APPMAX_API_KEY}` } })
-        },
-        {
-            name: 'BODY (client_key)',
-            fn: () => axios.post(baseUrl, { ...data, client_key: APPMAX_API_KEY })
+            fn: () => axios.post(baseUrl, data, { headers: { ...defaultHeaders, 'Authorization': `Bearer ${APPMAX_API_KEY}` } })
         }
     ];
 
     let lastError;
     for (const strategy of strategies) {
         try {
-            console.log(`[Appmax] Tentando estratégia: ${strategy.name}...`);
+            console.log(`[Appmax] Tentando: ${strategy.name}...`);
             const response = await strategy.fn();
             
-            if (response.data && (response.data.success || response.status === 200 || response.status === 201)) {
-                console.log(`[Appmax] Sucesso com a estratégia: ${strategy.name}`);
+            if (response.data && response.data.success) {
+                console.log(`[Appmax] Sucesso: ${strategy.name}`);
                 return response.data;
             }
             
-            lastError = new Error(response.data.message || 'Erro na resposta da Appmax');
+            lastError = new Error(response.data.message || 'Erro na resposta');
             lastError.response = response;
         } catch (error) {
             lastError = error;
-            const status = error.response ? error.response.status : 'SEM STATUS';
-            console.log(`[Appmax] Falha na estratégia ${strategy.name} (Status: ${status})`);
+            const status = error.response ? error.response.status : 'ERRO REDE';
+            console.log(`[Appmax] Falha: ${strategy.name} (Status: ${status})`);
             
-            // Se não for 401, o erro é outro (ex: dados inválidos), então paramos aqui
-            if (status !== 401) {
-                console.log(`[Appmax] Erro não é 401, interrompendo tentativas.`);
+            // Se o erro for 400 (Bad Request), o problema são os dados, não a chave
+            if (status === 400) {
+                console.log(`[Appmax] Dados inválidos detectados. Detalhes:`, JSON.stringify(error.response.data));
                 break;
             }
+            
+            // Se não for 401 ou 403, paramos
+            if (status !== 401 && status !== 403) break;
         }
     }
     throw lastError;
@@ -88,9 +92,7 @@ app.post('/api/pix', async (req, res) => {
         const lastName = payer_name.split(' ').slice(1).join(' ') || 'Sobrenome';
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
-        console.log(`[Appmax] Processando Pix para: ${payer_name}`);
-
-        // 1. Criar/Atualizar Cliente
+        // 1. Criar Cliente (Mínimo de campos para teste)
         const customerData = await appmaxRequest('/customers', {
             first_name: firstName,
             last_name: lastName,
@@ -105,14 +107,12 @@ app.post('/api/pix', async (req, res) => {
         // 2. Criar Pedido
         const orderData = await appmaxRequest('/orders', {
             customer_id: customerId,
-            products: [
-                {
-                    sku: 'PRODUTO_PIX',
-                    name: 'Produto Checkout Pix',
-                    quantity: 1,
-                    unit_value: Math.round(parseFloat(amount) * 100)
-                }
-            ],
+            products: [{
+                sku: 'PIX_PROD',
+                name: 'Pagamento Pix',
+                quantity: 1,
+                unit_value: Math.round(parseFloat(amount) * 100)
+            }],
             total_value: Math.round(parseFloat(amount) * 100)
         });
 
@@ -122,9 +122,7 @@ app.post('/api/pix', async (req, res) => {
         const paymentData = await appmaxRequest('/payments/pix', {
             order_id: orderId,
             payment_data: {
-                pix: {
-                    document_number: payer_cpf.replace(/\D/g, '')
-                }
+                pix: { document_number: payer_cpf.replace(/\D/g, '') }
             }
         });
 
@@ -140,7 +138,7 @@ app.post('/api/pix', async (req, res) => {
         
         res.status(error.response ? error.response.status : 500).json({ 
             success: false, 
-            message: 'Erro na integração com Appmax. Verifique os logs do servidor.',
+            message: 'Erro na integração. Verifique se sua chave de API está correta e ativa.',
             details: errorData
         });
     }
