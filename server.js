@@ -23,11 +23,29 @@ app.post('/generate-pix', async (req, res) => {
     try {
         // No Render, o Puppeteer precisa de configurações específicas
         // Aqui usamos o puppeteer-core para ser mais leve
-        browser = await puppeteer.launch({
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'linux' ? '/usr/bin/google-chrome' : null),
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            headless: true
-        });
+        const options = {
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'
+            ],
+            headless: "new",
+        };
+
+        // No Render, o Chrome fica em um local específico
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        } else if (process.platform === 'linux') {
+            // Tentativa de encontrar o chrome no ambiente linux do Render
+            options.executablePath = '/usr/bin/google-chrome';
+        }
+
+        browser = await puppeteer.launch(options);
 
         const page = await browser.newPage();
         
