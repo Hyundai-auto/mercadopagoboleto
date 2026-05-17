@@ -1,105 +1,96 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const axios = require('axios');
 const cors = require('cors');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-
-puppeteer.use(StealthPlugin());
+const bodyParser = require('body-parser');
+require('dotenv').config();
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static('public'));
 
-const CHECKOUT_URL = 'https://pay.meuservicomei.com.br/r/a51L1PhTl58c6S86';
+const APPMAX_API_URL = 'https://api.appmax.com.br/v1';
+const APPMAX_API_KEY = process.env.APPMAX_API_KEY;
 
-app.get('/', (req, res) => {
-    res.send('Servidor de Automação de Checkout está ATIVO! Use a rota POST /process-payment para enviar os dados.');
-});
-
-app.post('/process-payment', async (req, res) => {
-    const { name, email, cpf, phone } = req.body;
-
-    console.log(`Recebida requisição para: ${name}, CPF: ${cpf}`);
-
-    if (!name || !cpf) {
-        return res.status(400).json({ success: false, message: 'Nome e CPF são obrigatórios.' });
-    }
-
-    let browser;
+// Endpoint para gerar o Pix
+app.post('/api/pix', async (req, res) => {
     try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--single-process',
-                '--no-zygote'
-            ]
+        const { payer_name, payer_cpf, payer_phone, amount } = req.body;
+
+        if (!payer_name || !payer_cpf || !amount) {
+            return res.status(400).json({ success: false, message: 'Dados incompletos' });
+        }
+
+        // 1. Criar ou atualizar o cliente
+        const customerResponse = await axios.post(`${APPMAX_API_URL}/customers`, {
+            access_token: APPMAX_API_KEY,
+            first_name: payer_name.split(' ')[0],
+            last_name: payer_name.split(' ').slice(1).join(' ') || 'Sobrenome',
+            email: `cliente_${payer_cpf}@email.com`, // Email fictício baseado no CPF se não fornecido
+            phone: payer_phone,
+            document_number: payer_cpf
         });
 
-        const page = await browser.newPage();
-        page.setDefaultNavigationTimeout(60000);
-        
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+        if (!customerResponse.data.success) {
+            throw new Error('Erro ao criar cliente na Appmax');
+        }
 
-        console.log(`Navegando para: ${CHECKOUT_URL}`);
-        await page.goto(CHECKOUT_URL, { waitUntil: 'networkidle2' });
+        const customerId = customerResponse.data.data.id;
 
-        // Tentar pular telas de interrupção
-        try {
-            const buttons = await page.$$('button, a');
-            for (const btn of buttons) {
-                const text = await page.evaluate(el => el.innerText, btn);
-                if (text.toLowerCase().includes('preencher meus dados') || text.toLowerCase().includes('continuar')) {
-                    await btn.click();
-                    await new Promise(r => setTimeout(r, 1500));
-                    break;
+        // 2. Criar o pedido
+        const orderResponse = await axios.post(`${APPMAX_API_URL}/orders`, {
+            access_token: APPMAX_API_KEY,
+            customer_id: customerId,
+            products: [
+                {
+                    sku: 'PRODUTO_PIX',
+                    name: 'Produto Checkout Pix',
+                    quantity: 1,
+                    unit_value: Math.round(parseFloat(amount) * 100) // Appmax usa centavos
+                }
+            ],
+            total_value: Math.round(parseFloat(amount) * 100)
+        });
+
+        if (!orderResponse.data.success) {
+            throw new Error('Erro ao criar pedido na Appmax');
+        }
+
+        const orderId = orderResponse.data.data.id;
+
+        // 3. Efetuar pagamento via Pix
+        const paymentResponse = await axios.post(`${APPMAX_API_URL}/payments/pix`, {
+            access_token: APPMAX_API_KEY,
+            order_id: orderId,
+            payment_data: {
+                pix: {
+                    document_number: payer_cpf
                 }
             }
-        } catch (e) {}
-
-        const selectors = {
-            name: 'input[placeholder*="Nome"], input[name*="name"]',
-            email: 'input[placeholder*="mail"], input[name*="email"]',
-            cpf: 'input[placeholder*="CPF"], input[name*="cpf"]',
-            phone: 'input[placeholder*="Celular"], input[name*="phone"]'
-        };
-
-        await page.waitForSelector(selectors.name, { timeout: 15000 });
-        await page.type(selectors.name, name, { delay: 30 });
-        if (email) await page.type(selectors.email, email, { delay: 30 });
-        await page.type(selectors.cpf, cpf, { delay: 30 });
-        if (phone) await page.type(selectors.phone, phone, { delay: 30 });
-
-        console.log("Campos preenchidos. Clicando em PAGAR...");
-
-        const clicked = await page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const payBtn = buttons.find(btn => btn.innerText.toUpperCase().includes('PAGAR'));
-            if (payBtn) { payBtn.click(); return true; }
-            return false;
         });
 
-        if (!clicked) throw new Error("Botão PAGAR não encontrado.");
-
-        console.log("Aguardando redirecionamento...");
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 });
-        
-        const pixUrl = page.url();
-        console.log(`Sucesso! URL: ${pixUrl}`);
-
-        await browser.close();
-        res.json({ success: true, pixUrl: pixUrl });
+        if (paymentResponse.data.success) {
+            res.json({
+                success: true,
+                pixCode: paymentResponse.data.data.pix_code,
+                qrCodeImage: paymentResponse.data.data.pix_qr_code
+            });
+        } else {
+            res.status(500).json({ success: false, message: 'Erro ao processar pagamento Pix' });
+        }
 
     } catch (error) {
-        console.error('Erro na automação:', error.message);
-        if (browser) await browser.close();
-        res.status(500).json({ success: false, message: 'Erro ao processar pagamento.', details: error.message });
+        console.error('Erro na integração Appmax:', error.response ? error.response.data : error.message);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro interno no servidor',
+            details: error.response ? error.response.data : error.message
+        });
     }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
