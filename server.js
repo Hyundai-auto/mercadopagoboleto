@@ -16,45 +16,61 @@ const IS_SANDBOX = process.env.APPMAX_ENV === 'sandbox';
 const APPMAX_API_URL = IS_SANDBOX 
     ? 'https://api.sandboxappmax.com.br/v1' 
     : 'https://api.appmax.com.br/v1';
-const APPMAX_API_KEY = process.env.APPMAX_API_KEY;
+const APPMAX_API_KEY = (process.env.APPMAX_API_KEY || '').trim();
 
 console.log(`[Appmax] Iniciando em modo: ${IS_SANDBOX ? 'SANDBOX' : 'PRODUÇÃO'}`);
 console.log(`[Appmax] URL da API: ${APPMAX_API_URL}`);
+console.log(`[Appmax] Chave configurada: ${APPMAX_API_KEY ? 'SIM (Tamanho: ' + APPMAX_API_KEY.length + ')' : 'NÃO'}`);
 
 /**
  * Função centralizada para requisições Appmax
- * Tenta múltiplos formatos de autenticação para garantir compatibilidade
  */
 async function appmaxRequest(endpoint, data) {
-    const url = `${APPMAX_API_URL}${endpoint}`;
+    const baseUrl = `${APPMAX_API_URL}${endpoint}`;
     
-    // Lista de estratégias de autenticação para tentar
+    // Lista de estratégias de autenticação
     const strategies = [
-        // Estratégia 1: access_token no corpo (Padrão v1)
-        () => axios.post(url, { ...data, access_token: APPMAX_API_KEY }),
-        // Estratégia 2: Bearer Token no Header (Padrão OAuth2)
-        () => axios.post(url, data, { headers: { 'Authorization': `Bearer ${APPMAX_API_KEY}` } }),
-        // Estratégia 3: client_key no corpo (Algumas rotas legadas)
-        () => axios.post(url, { ...data, client_key: APPMAX_API_KEY })
+        {
+            name: 'BODY (access_token)',
+            fn: () => axios.post(baseUrl, { ...data, access_token: APPMAX_API_KEY })
+        },
+        {
+            name: 'QUERY PARAM (?access_token=)',
+            fn: () => axios.post(`${baseUrl}?access_token=${APPMAX_API_KEY}`, data)
+        },
+        {
+            name: 'HEADER (Bearer Token)',
+            fn: () => axios.post(baseUrl, data, { headers: { 'Authorization': `Bearer ${APPMAX_API_KEY}` } })
+        },
+        {
+            name: 'BODY (client_key)',
+            fn: () => axios.post(baseUrl, { ...data, client_key: APPMAX_API_KEY })
+        }
     ];
 
     let lastError;
-    for (let i = 0; i < strategies.length; i++) {
+    for (const strategy of strategies) {
         try {
-            const response = await strategies[i]();
-            if (response.data && response.data.success) {
+            console.log(`[Appmax] Tentando estratégia: ${strategy.name}...`);
+            const response = await strategy.fn();
+            
+            if (response.data && (response.data.success || response.status === 200 || response.status === 201)) {
+                console.log(`[Appmax] Sucesso com a estratégia: ${strategy.name}`);
                 return response.data;
             }
-            // Se a API retornar success: false, consideramos erro
+            
             lastError = new Error(response.data.message || 'Erro na resposta da Appmax');
             lastError.response = response;
         } catch (error) {
             lastError = error;
-            // Se não for erro de autenticação (401), não adianta tentar outras estratégias
-            if (!error.response || error.response.status !== 401) {
+            const status = error.response ? error.response.status : 'SEM STATUS';
+            console.log(`[Appmax] Falha na estratégia ${strategy.name} (Status: ${status})`);
+            
+            // Se não for 401, o erro é outro (ex: dados inválidos), então paramos aqui
+            if (status !== 401) {
+                console.log(`[Appmax] Erro não é 401, interrompendo tentativas.`);
                 break;
             }
-            console.log(`[Appmax] Estratégia ${i + 1} falhou com 401, tentando próxima...`);
         }
     }
     throw lastError;
@@ -72,7 +88,7 @@ app.post('/api/pix', async (req, res) => {
         const lastName = payer_name.split(' ').slice(1).join(' ') || 'Sobrenome';
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
-        console.log(`[Appmax] Processando Pix: ${payer_name} (${payer_cpf})`);
+        console.log(`[Appmax] Processando Pix para: ${payer_name}`);
 
         // 1. Criar/Atualizar Cliente
         const customerData = await appmaxRequest('/customers', {
@@ -112,7 +128,6 @@ app.post('/api/pix', async (req, res) => {
             }
         });
 
-        console.log(`[Appmax] Pix gerado com sucesso para Pedido #${orderId}`);
         res.json({
             success: true,
             pixCode: paymentData.data.pix_code,
@@ -121,16 +136,13 @@ app.post('/api/pix', async (req, res) => {
 
     } catch (error) {
         const errorData = error.response ? error.response.data : { message: error.message };
-        console.error('[Appmax] Erro Crítico:', JSON.stringify(errorData));
+        console.error('[Appmax] Erro Final:', JSON.stringify(errorData));
         
-        let status = error.response ? error.response.status : 500;
-        let message = 'Erro ao processar pagamento';
-
-        if (status === 401) {
-            message = 'Erro de Autenticação: A chave de API fornecida é inválida para o ambiente selecionado.';
-        }
-
-        res.status(status).json({ success: false, message, details: errorData });
+        res.status(error.response ? error.response.status : 500).json({ 
+            success: false, 
+            message: 'Erro na integração com Appmax. Verifique os logs do servidor.',
+            details: errorData
+        });
     }
 });
 
