@@ -23,18 +23,25 @@ app.post('/api/pix', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Dados incompletos' });
         }
 
+        const firstName = payer_name.split(' ')[0];
+        const lastName = payer_name.split(' ').slice(1).join(' ') || 'Sobrenome';
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
         // 1. Criar ou atualizar o cliente
+        // Nota: A Appmax exige access_token no corpo da requisição para v1
         const customerResponse = await axios.post(`${APPMAX_API_URL}/customers`, {
             access_token: APPMAX_API_KEY,
-            first_name: payer_name.split(' ')[0],
-            last_name: payer_name.split(' ').slice(1).join(' ') || 'Sobrenome',
-            email: `cliente_${payer_cpf}@email.com`, // Email fictício baseado no CPF se não fornecido
-            phone: payer_phone,
-            document_number: payer_cpf
+            first_name: firstName,
+            last_name: lastName,
+            email: `cliente_${payer_cpf}@email.com`,
+            phone: payer_phone.replace(/\D/g, ''),
+            document_number: payer_cpf.replace(/\D/g, ''),
+            ip: clientIp
         });
 
         if (!customerResponse.data.success) {
-            throw new Error('Erro ao criar cliente na Appmax');
+            console.error('Erro ao criar cliente:', customerResponse.data);
+            throw new Error(customerResponse.data.message || 'Erro ao criar cliente na Appmax');
         }
 
         const customerId = customerResponse.data.data.id;
@@ -48,14 +55,15 @@ app.post('/api/pix', async (req, res) => {
                     sku: 'PRODUTO_PIX',
                     name: 'Produto Checkout Pix',
                     quantity: 1,
-                    unit_value: Math.round(parseFloat(amount) * 100) // Appmax usa centavos
+                    unit_value: Math.round(parseFloat(amount) * 100)
                 }
             ],
             total_value: Math.round(parseFloat(amount) * 100)
         });
 
         if (!orderResponse.data.success) {
-            throw new Error('Erro ao criar pedido na Appmax');
+            console.error('Erro ao criar pedido:', orderResponse.data);
+            throw new Error(orderResponse.data.message || 'Erro ao criar pedido na Appmax');
         }
 
         const orderId = orderResponse.data.data.id;
@@ -66,7 +74,7 @@ app.post('/api/pix', async (req, res) => {
             order_id: orderId,
             payment_data: {
                 pix: {
-                    document_number: payer_cpf
+                    document_number: payer_cpf.replace(/\D/g, '')
                 }
             }
         });
@@ -78,15 +86,27 @@ app.post('/api/pix', async (req, res) => {
                 qrCodeImage: paymentResponse.data.data.pix_qr_code
             });
         } else {
-            res.status(500).json({ success: false, message: 'Erro ao processar pagamento Pix' });
+            console.error('Erro ao processar Pix:', paymentResponse.data);
+            res.status(500).json({ success: false, message: paymentResponse.data.message || 'Erro ao processar pagamento Pix' });
         }
 
     } catch (error) {
-        console.error('Erro na integração Appmax:', error.response ? error.response.data : error.message);
+        const errorData = error.response ? error.response.data : error.message;
+        console.error('Erro na integração Appmax:', errorData);
+        
+        // Se o erro for Unauthorized, avisar o usuário sobre a chave de API
+        if (error.response && error.response.status === 401) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Chave de API (access_token) inválida ou não autorizada. Verifique suas credenciais na Appmax.',
+                details: errorData
+            });
+        }
+
         res.status(500).json({ 
             success: false, 
-            message: 'Erro interno no servidor',
-            details: error.response ? error.response.data : error.message
+            message: 'Erro interno no servidor ao processar com Appmax',
+            details: errorData
         });
     }
 });
