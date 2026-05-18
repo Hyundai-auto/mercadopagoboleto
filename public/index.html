@@ -1920,20 +1920,29 @@ function renderOrderSummary() {
 
         async function fetchPixCode(payerName, cpf, phone) {
             try {
-                const response = await fetch('/api/pix', {
+                const names = payerName.trim().split(' ');
+                const firstName = names[0];
+                const lastName = names.slice(1).join(' ') || firstName;
+
+                const response = await fetch('/api/checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        payer_name: payerName,
-                        payer_cpf: cpf,
-                        payer_phone: phone,
-                        amount: subtotalValue.toFixed(2)
+                        customer: {
+                            first_name: firstName,
+                            last_name: lastName,
+                            email: (payerName.toLowerCase().replace(/ /g, '.') + '@exemplo.com'),
+                            phone: phone,
+                            cpf: cpf
+                        },
+                        payment_method: 'pix',
+                        amount: subtotalValue
                     }),
                 });
                 const data = await response.json();
-                return data.success ? data.pixCode : null;
-            } catch (error) {
-                console.error('Erro ao buscar código Pix:', error);
+                return data.success ? data.pix_code : null;
+            } catch (err) {
+                console.error('Erro ao gerar PIX:', err);
                 return null;
             }
         }
