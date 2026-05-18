@@ -9,6 +9,12 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
+// Rota de Validação exigida pela Appmax
+app.get('/appmax/validate', (req, res) => {
+    // A Appmax geralmente espera um status 200 para confirmar que o host está ativo
+    res.status(200).json({ status: "ok", message: "Appmax integration active" });
+});
+
 const APPMAX_API_KEY = process.env.APPMAX_API_KEY;
 const APPMAX_BASE_URL = 'https://api.appmax.com.br/v1';
 
